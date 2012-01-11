@@ -2,10 +2,10 @@ package team035;
 
 import battlecode.common.RobotController;
 
-public abstract class Robot {
+public abstract class BaseRobot {
 	RobotController rc;
 	
-	public Robot(RobotController myRc) {
+	public BaseRobot(RobotController myRc) {
 		this.rc = myRc;
 	}
 	

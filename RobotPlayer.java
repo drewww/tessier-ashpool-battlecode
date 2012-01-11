@@ -7,10 +7,10 @@ public class RobotPlayer {
 //	static int counter;
 
     public static void run(RobotController myRC) {
-    	Robot robot;
+    	BaseRobot robot;
     	switch(myRC.getType()) {
     	case ARCHON:
-    		robot = new ArchonRobot(myRC);
+    		robot = new BoidRobot(myRC);
     		robot.engage();
     		break;
     	case SCOUT:

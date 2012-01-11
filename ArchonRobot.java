@@ -7,7 +7,7 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 
-public class ArchonRobot extends Robot {
+public class ArchonRobot extends BaseRobot {
 	protected enum State {
 		SETUP, SPAWNING 
 	}

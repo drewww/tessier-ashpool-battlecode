@@ -4,7 +4,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.RobotController;
 import battlecode.common.RobotType;
 
-public class ScoutRobot extends Robot {
+public class ScoutRobot extends BaseRobot {
 	
 	public ScoutRobot(RobotController myRc) {
 		super(myRc);
