@@ -3,10 +3,10 @@ package team035;
 import battlecode.common.RobotController;
 
 public abstract class Robot {
-	RobotController myRc;
+	RobotController rc;
 	
 	public Robot(RobotController myRc) {
-		this.myRc = myRc;
+		this.rc = myRc;
 	}
 	
 	public abstract void engage();

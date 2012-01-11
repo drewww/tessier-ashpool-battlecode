@@ -13,16 +13,16 @@ public class ScoutRobot extends Robot {
 	public void engage() {
 		while(true) {
 	    try {
-        while (myRc.isMovementActive()) {
-            myRc.yield();
+        while (rc.isMovementActive()) {
+            rc.yield();
         }
 
-        if (myRc.canMove(myRc.getDirection())) {
-            myRc.moveForward();
+        if (rc.canMove(rc.getDirection())) {
+            rc.moveForward();
         } else {
-            myRc.setDirection(myRc.getDirection().rotateRight());
+            rc.setDirection(rc.getDirection().rotateRight());
         }
-        myRc.yield();
+        rc.yield();
     } catch (Exception e) {
         System.out.println("caught exception:");
         e.printStackTrace();
