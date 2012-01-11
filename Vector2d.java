@@ -22,6 +22,10 @@ public class Vector2d {
 		this.y = l.y;
 	}
 	
+	public static Vector2d sub(Vector2d a, Vector2d b) {
+		return new Vector2d(a.x - b.x, a.y-b.y);
+	}
+	
 	public static Vector2d sub(MapLocation a, MapLocation b) {
 		return new Vector2d(a.x - b.x, a.y-b.y);
 	}
@@ -40,7 +44,7 @@ public class Vector2d {
 		// might be cheaper to do atan rather than sqrt + 2 powers, but we'll see
 		//	double angle = Math.atan(this.y/this.x);
 		
-		double mag = Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+		double mag = this.mag();
 		
 		this.x = this.x / mag;
 		this.y = this.y / mag;
@@ -105,6 +109,10 @@ public class Vector2d {
 	
 	public String toString() {
 		return "{" + this.x + ", " + this.y + "}";
+	}
+	
+	public double mag() {
+		return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
 	}
 	
 	public static void main(String args[]) {
