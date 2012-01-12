@@ -58,32 +58,32 @@ public abstract class BaseRobot {
 		}
 	}
 	
-	protected RobotController getRc() {
+	public RobotController getRc() {
 		return rc;
 	}
 
 
-	protected NavController getMc() {
+	public NavController getMc() {
 		return nav;
 	}
 
 
-	protected RobotBrain getBrain() {
+	public RobotBrain getBrain() {
 		return brain;
 	}
 
 
-	protected StateCache getCache() {
+	public StateCache getCache() {
 		return cache;
 	}
 
 
-	protected RadioController getRadio() {
+	public RadioController getRadio() {
 		return radio;
 	}
 
 
-	protected RadarController getRadar() {
+	public RadarController getRadar() {
 		return radar;
 	}
 }
