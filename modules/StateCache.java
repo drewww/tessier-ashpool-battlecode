@@ -1,11 +1,13 @@
 package team035.modules;
 
-import battlecode.common.RobotInfo;
 import team035.robots.BaseRobot;
+import battlecode.common.MapLocation;
+import battlecode.common.RobotInfo;
 
 public class StateCache {
 	public static final int MAX_ROBOTS = 64;
-	
+	public static final int MAX_ARCHONS = 6;
+
 	protected BaseRobot r;
 	
 	
@@ -18,6 +20,9 @@ public class StateCache {
 	// 5. friendly archon states
 	// 6. overall team strategy
 	
+	
+	
+	// ---- robots -------- //
 	protected RobotInfo[] robots;
 	protected RobotInfo[] friendlyRobots;
 	protected RobotInfo[] enemyRobots;
@@ -25,20 +30,23 @@ public class StateCache {
 	public int numFriendlyRobotsInRange;
 	public int numEnemyRobotsInRange;
 	
+	protected MapLocation[] friendlyArchonLocs;
+	
 	public StateCache(BaseRobot r) {
 		this.r = r;
 	}
 	
 	public void newRound() {
-
 		// for now, flush all our state each round.
 		robots = new RobotInfo[MAX_ROBOTS];
 		numRobotsInRange = 0;
 		numFriendlyRobotsInRange = 0;
 		numEnemyRobotsInRange = 0;
 		
-		friendlyRobots = new RobotInfo[MAX_ROBOTS];;
-		enemyRobots = new RobotInfo[MAX_ROBOTS];;
+		friendlyRobots = new RobotInfo[MAX_ROBOTS];
+		enemyRobots = new RobotInfo[MAX_ROBOTS];
+		
+		friendlyArchonLocs = null;
 	}
 
 	public void addRobot(RobotInfo r) {
@@ -76,6 +84,15 @@ public class StateCache {
 		
 		return out;
 
+	}
+	
+	// ------------ SIMPLE CACHING METHODS ---------------- //
+	public MapLocation[] getFriendlyArchonLocs() {
+		if(this.friendlyArchonLocs==null) {
+			this.friendlyArchonLocs = this.r.getRc().senseAlliedArchons();
+		}
+		
+		return this.friendlyArchonLocs;
 	}
 	
 }

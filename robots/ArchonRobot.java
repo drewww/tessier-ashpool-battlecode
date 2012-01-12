@@ -14,8 +14,10 @@ public class ArchonRobot extends BaseRobot {
 		
 		this.radar = new RadarController(this);
 		this.radio = new RadioController(this);
-		this.brain = new ArchonBrain(this);
 		this.cache = new StateCache(this);
 		this.nav = new NavController(this);
+		
+		this.brain = new ArchonBrain(this);
+//		this.brain = new TestBrain(this);
 	}
 }
