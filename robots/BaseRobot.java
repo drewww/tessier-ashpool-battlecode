@@ -22,6 +22,9 @@ public abstract class BaseRobot {
 
 	// This is my helpful comment about this function!
 	public void engage() {
+		// We need to do this here for the first turn. Subsequent turns' starts
+		// will happen inside this.yield().
+		this.startTurn();
 		while(true) {
 			try {
 				brain.think();
@@ -34,8 +37,14 @@ public abstract class BaseRobot {
 	}
 
 	protected void startTurn() {
-		this.radar.scan();
-		this.radio.receive();
+		try{
+			this.cache.newRound();
+			this.radar.scan();
+			this.radio.receive();
+		} catch (Exception e) {
+			// This is bad! It'll short circuit an entire turn startup.
+			e.printStackTrace();
+		}
 	}
 
 	protected void endTurn() {
@@ -63,7 +72,7 @@ public abstract class BaseRobot {
 	}
 
 
-	public NavController getMc() {
+	public NavController getNav() {
 		return nav;
 	}
 
