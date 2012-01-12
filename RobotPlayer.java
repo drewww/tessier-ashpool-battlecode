@@ -1,53 +1,22 @@
 package team035;
 
-import battlecode.common.*;
-import java.util.Random;
+import team035.robots.ArchonRobot;
+import team035.robots.BaseRobot;
+import battlecode.common.RobotController;
 
 public class RobotPlayer {
-//	static int counter;
-
-    public static void run(RobotController myRC) {
+    public static void run(RobotController rc) {
     	BaseRobot robot;
-    	switch(myRC.getType()) {
+    	switch(rc.getType()) {
     	case ARCHON:
-    		robot = new BoidRobot(myRC);
+    		robot = new ArchonRobot(rc);
     		robot.engage();
     		break;
-    	case SCOUT:
-    		robot = new ScoutRobot(myRC);
-    		robot.engage();
-    		break;    		
     	default:
     		while(true) {
-    			myRC.yield();
+    			rc.yield();
     		}
     	
     	}
-//    	counter++;
-//    	while(true) {
-//
-//	    	myRC.setIndicatorString(0, "Counter is: " + counter);
-//    	}
-//    	
-//    	switch(myRC.getType()) {
-//    	default:
-//        while (true) {
-//            try {
-//                while (myRC.isMovementActive()) {
-//                    myRC.yield();
-//                }
-//
-//                if (myRC.canMove(myRC.getDirection())) {
-//                    myRC.moveForward();
-//                } else {
-//                    myRC.setDirection(myRC.getDirection().rotateRight());
-//                }
-//                myRC.yield();
-//            } catch (Exception e) {
-//                System.out.println("caught exception:");
-//                e.printStackTrace();
-//            }
-//        }
-//    	}
     }
 }
