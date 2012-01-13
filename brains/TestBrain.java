@@ -16,13 +16,9 @@ public class TestBrain extends RobotBrain {
 
 	@Override
 	public void think() {
-		// call it a few times to make sure cacheing is working.
-		this.r.getCache().getFriendlyArchonLocs();
-		this.r.getCache().getFriendlyArchonLocs();
-		this.r.getCache().getFriendlyArchonLocs();
+		// Leaving this empty in the repo for people to add testing code as they so desire.
 		
-		this.r.getCache().getEnemyRobots();
-		this.r.getCache().getFriendlyRobots();
-		this.r.getCache().getRobots();
+		
+		
 	}
 }
