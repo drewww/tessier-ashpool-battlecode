@@ -1,25 +1,25 @@
 package team035.brains;
 
+import team035.modules.NavController;
 import team035.robots.BaseRobot;
+import battlecode.common.MapLocation;
 
-/**
- * A dummy brain where you can just throw function calls in for some trivial testing.
- * 
- * @author drew
- *
- */
 public class OwenTestBrain extends RobotBrain {
 
 	public OwenTestBrain(BaseRobot r) {
 		super(r);
+		MapLocation loc =  this.r.getRc().getLocation();
+		this.r.getNav().setTarget(new MapLocation(loc.x - 7, loc.y+5));
 	}
 
 	@Override
 	public void think() {
-		// Leaving this empty in the repo for people to add testing code as they so desire.
-		
-		// this is some extra test brain content blah blah
-		
-		
+		System.out.println("At: " + this.r.getRc().getLocation());
+		NavController nav = this.r.getNav();
+		boolean moved = nav.doMove();
+		if(nav.isAtTarget()) {
+			System.out.println("Reached target!");
+		}
 	}
+
 }
