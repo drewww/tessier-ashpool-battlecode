@@ -1,6 +1,7 @@
 package team035.modules;
 
 import team035.robots.BaseRobot;
+import battlecode.common.Direction;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
 
@@ -93,6 +94,11 @@ public class StateCache {
 		}
 		
 		return this.friendlyArchonLocs;
+	}
+
+	//TODO Need to cache this
+	public boolean canMove(Direction direction) {
+		return this.r.getRc().canMove(direction);
 	}
 	
 }
