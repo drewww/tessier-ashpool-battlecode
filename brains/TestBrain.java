@@ -1,5 +1,7 @@
 package team035.brains;
 
+import team035.messages.LocationMessage;
+import team035.messages.MessageAddress;
 import team035.robots.BaseRobot;
 
 /**
@@ -24,5 +26,8 @@ public class TestBrain extends RobotBrain {
 		this.r.getCache().getEnemyRobots();
 		this.r.getCache().getFriendlyRobots();
 		this.r.getCache().getRobots();
+		
+		// do some message stuff
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LocationMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation()));
 	}
 }
