@@ -1,5 +1,6 @@
 package team035.brains;
 
+import team035.messages.RobotMessageProtos.Person;
 import team035.robots.BaseRobot;
 
 /**
@@ -24,5 +25,14 @@ public class TestBrain extends RobotBrain {
 		this.r.getCache().getEnemyRobots();
 		this.r.getCache().getFriendlyRobots();
 		this.r.getCache().getRobots();
+		
+		Person.Builder person = Person.newBuilder();
+		
+		person.setId(0);
+		person.setName("drew");
+		
+		person.setEmail("drew@example.com");
+
+		System.out.println(person.build());
 	}
 }
