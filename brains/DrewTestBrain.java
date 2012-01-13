@@ -8,9 +8,9 @@ import team035.robots.BaseRobot;
  * @author drew
  *
  */
-public class TestBrain extends RobotBrain {
+public class DrewTestBrain extends RobotBrain {
 
-	public TestBrain(BaseRobot r) {
+	public DrewTestBrain(BaseRobot r) {
 		super(r);
 	}
 
