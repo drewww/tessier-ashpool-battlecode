@@ -10,19 +10,17 @@ import team035.robots.BaseRobot;
  * @author drew
  *
  */
-public class TestBrain extends RobotBrain {
+public class DrewTestBrain extends RobotBrain {
 
-	public TestBrain(BaseRobot r) {
+	public DrewTestBrain(BaseRobot r) {
 		super(r);
 	}
 
 	@Override
 	public void think() {
-		// call it a few times to make sure cacheing is working.
-		this.r.getCache().getFriendlyArchonLocs();
-		this.r.getCache().getFriendlyArchonLocs();
-		this.r.getCache().getFriendlyArchonLocs();
+		// Leaving this empty in the repo for people to add testing code as they so desire.
 		
+		// this is some extra test brain content blah blah
 		this.r.getCache().getEnemyRobots();
 		this.r.getCache().getFriendlyRobots();
 		this.r.getCache().getRobots();
