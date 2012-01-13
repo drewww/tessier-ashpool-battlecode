@@ -30,7 +30,7 @@
 
 package team035.com.google.protobuf;
 
-import com.google.protobuf.DescriptorProtos.*;
+import team035.com.google.protobuf.DescriptorProtos.*;
 
 import java.util.Arrays;
 import java.util.Collections;

@@ -30,8 +30,8 @@
 
 package team035.com.google.protobuf;
 
-import com.google.protobuf.Descriptors.Descriptor;
-import com.google.protobuf.Descriptors.FieldDescriptor;
+import team035.com.google.protobuf.Descriptors.Descriptor;
+import team035.com.google.protobuf.Descriptors.FieldDescriptor;
 
 import java.io.InputStream;
 import java.io.IOException;
