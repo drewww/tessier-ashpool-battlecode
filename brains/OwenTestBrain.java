@@ -9,7 +9,7 @@ public class OwenTestBrain extends RobotBrain {
 	public OwenTestBrain(BaseRobot r) {
 		super(r);
 		MapLocation loc =  this.r.getRc().getLocation();
-		this.r.getNav().setTarget(new MapLocation(loc.x - 7, loc.y+5));
+		this.r.getNav().setTarget(new MapLocation(loc.x, loc.y+25));
 	}
 
 	@Override
