@@ -2,6 +2,7 @@ package team035.messages;
 
 import java.io.Serializable;
 
+import team035.robots.BaseRobot;
 import battlecode.common.RobotType;
 
 public class MessageAddress implements Serializable {
@@ -41,6 +42,23 @@ public class MessageAddress implements Serializable {
 		} else {
 			System.out.println("ERR: Tried to make a MessageAddress with no args and an AddressType other than BROADCAST");
 		}
+	}
+	
+	public boolean isForRobot(BaseRobot r) {
+		
+		switch(type) {
+			case BROADCAST:
+				return true;
+			case ROBOT_ID:
+				if(r.getRc().getRobot().getID()==this.id) return true;
+				else return false;
+			case ROBOT_TYPE:
+				if(this.robotType==r.getRc().getType()) return true;
+				else return false;
+			default:
+				return false;
+		}
+		
 	}
 	
 	public String toString() {
