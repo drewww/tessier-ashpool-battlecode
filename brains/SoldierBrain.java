@@ -28,16 +28,16 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 	@Override
 	public void think() {
+		System.out.println("state: " + this.state);
 
 		switch(this.state) {
 		case HOLD:
 			// do nothing! we're waiting for someone to tell us where to go.
-			
 			break;
 		case MOVE:
 			NavController nav = this.r.getNav();
 			if(nav.isAtTarget()) this.state = SoldierState.HOLD;
-			boolean moved = nav.doMove();
+			nav.doMove();
 			break;
 		case ATTACK:
 
@@ -46,17 +46,21 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 			break;
 		}
-
 	}
 
 	@Override
 	public void handleMessage(MessageWrapper msg) {
+		System.out.println("Got message! " + msg);
 		if(msg.msg.getType()==MoveOrderMessage.type) {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.
 
 			System.out.println("updating move target to: " + mom.moveTo);
 			this.r.getNav().setTarget(mom.moveTo);
+			
+			if(this.state==SoldierState.HOLD) {
+				this.state = SoldierState.MOVE;
+			}
 		}
 	}
 

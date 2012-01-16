@@ -87,8 +87,21 @@ public class RadioController {
 			}
 			Message outgoingMessage = new Message();
 
-			String[] s = {new String(bytesOut.toByteArray())};
+			
+			
+			
+			StringBuilder builder = new StringBuilder();
+			builder.append(new String(bytesOut.toByteArray()));
+
+			String[] s = {builder.toString()};
+
+			builder.append(RadioController.salt);
+
+			int[] i = {builder.toString().hashCode()};
+
+			
 			outgoingMessage.strings = s;
+			outgoingMessage.ints = i;
 			if(messagesWritten > 0) {
 				this.r.getRc().broadcast(outgoingMessage);
 			}
@@ -118,9 +131,12 @@ public class RadioController {
 		Message[] messages = this.r.getRc().getAllMessages();
 		System.out.println("received " + messages.length + " messages");
 		for(Message m : messages) {
-			
+
 			// skip invalid messages
-			if(!this.validMessage(m)) continue;
+			if(!this.validMessage(m)) {
+				System.out.println("skipping invalid message");
+				continue;
+			}
 			
 			ByteArrayInputStream byteIn = new ByteArrayInputStream(m.strings[0].getBytes());
 			try {
@@ -129,7 +145,11 @@ public class RadioController {
 	
 				if(nextObject.getClass() == MessageWrapper.class) {
 					MessageWrapper msg = (MessageWrapper)nextObject;
+					System.out.println("message: " + msg);
+
 					if(msg.isForThisRobot()) {
+						System.out.println("received message of type: " + msg.msg.getType());
+
 						for(RadioListener l : this.listeners.get(msg.msg.getType())) {
 							l.handleMessage(msg);
 						}
@@ -149,6 +169,10 @@ public class RadioController {
 	protected boolean validMessage(Message msg) {
 		// these tests ensure that the number of fields is right
 		// to make this a probable message from our team. 
+		System.out.println("ints: " + msg.ints);
+		System.out.println("strings: " + msg.strings);
+		System.out.println("locations: " + msg.locations);
+		
 		if(msg.ints==null) return false;
 		if(msg.strings==null) return false;
 		if(msg.locations != null) return false;
@@ -156,6 +180,7 @@ public class RadioController {
 		if(msg.ints.length!=1) return false;
 		if(msg.strings.length != 1) return false;
 
+		System.out.println("Checking hash validity now...");
 		// now do the more rigorous check - does the hashcode of the message string
 		// match the int in the ints field?
 		StringBuilder builder = new StringBuilder();
@@ -163,6 +188,7 @@ public class RadioController {
 		builder.append(RadioController.salt);
 		if(builder.toString().hashCode()!=msg.ints[0]) return false;
 
+		System.out.println("valid!");
 		return true;
 	}
 }
