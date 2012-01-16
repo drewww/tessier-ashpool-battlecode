@@ -26,6 +26,10 @@ public class NavController {
 	public void setTarget(MapLocation loc) {
 		this.target = loc;
 	}
+	
+	public MapLocation getTarget() {
+		return this.target;
+	}
 
 	public Direction getDesiredHeading() {
 		MapLocation myLoc = this.r.getRc().getLocation();
