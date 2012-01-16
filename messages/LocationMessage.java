@@ -6,6 +6,7 @@ import battlecode.common.Robot;
 public class LocationMessage extends BaseMessage {
 	private static final long serialVersionUID = 8203251897804898196L;
 
+	public static final String type = "LOC";
 	public MapLocation loc;
 	public SerializableRobot robot;
 	
@@ -16,5 +17,10 @@ public class LocationMessage extends BaseMessage {
 
 	public String toString() {
 		return "{loc: " + loc + ", info: " + robot + "}";
+	}
+
+	@Override
+	public String getType() {
+		return type;
 	}
 }

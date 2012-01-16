@@ -2,6 +2,8 @@ package team035.messages;
 
 import battlecode.common.RobotInfo;
 
-public class BaseMessage implements RobotMessage {
+public abstract class BaseMessage implements RobotMessage {
 	public RobotInfo sender;
+	
+	public abstract String getType();
 }

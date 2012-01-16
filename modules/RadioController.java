@@ -5,7 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Vector;
 
 import team035.messages.MessageAddress;
 import team035.messages.MessageWrapper;
@@ -16,6 +17,8 @@ import battlecode.common.Message;
 
 public class RadioController {
 	
+	protected static final String salt = "a23fo9anaewvaln32faln3falf3";
+	
 	protected BaseRobot r;
 	
 	
@@ -24,10 +27,41 @@ public class RadioController {
 	
 	public static final int MAX_MESSAGES_PER_TURN = 20;
 	
+	
+	// there's one of these for each message type, which has N objects that
+	// want to be notified about messages of that type.
+	protected HashMap<String, Vector<RadioListener>> listeners = new HashMap<String, Vector<RadioListener>>();
+	
 	public RadioController(BaseRobot r) {
 		this.r = r;
 		
 		this.newRound();
+	}
+
+	
+	public void addListener(RadioListener listener, String messageClass) {
+		String[] classes = new String[1];
+		classes[0] = messageClass;
+		this.addListener(listener, classes);
+	}
+
+	public void addListener(RadioListener listener, String[] messageClasses) {
+		Vector<RadioListener> listenersForClass;
+		
+		System.out.println("adding listener: " + listener + " for classes: " + messageClasses);
+		
+		for(String c : messageClasses) {
+			if(c==null) break;
+			
+			System.out.println("adding listener for class: " + c);
+			if(listeners.get(c)==null) {
+				listenersForClass = new Vector<RadioListener>();
+			} else {
+				listenersForClass = listeners.get(c);
+			}
+			listenersForClass.add(listener);
+			listeners.put(c, listenersForClass);
+		}
 	}
 	
 	public void addMessageToTransmitQueue(MessageAddress adr, RobotMessage m) {
@@ -87,7 +121,15 @@ public class RadioController {
 				Object nextObject = in.readObject();
 				
 				if(nextObject.getClass() == MessageWrapper.class) {
-					System.out.println("got message: " + (nextObject));
+					MessageWrapper msg = (MessageWrapper)nextObject;
+					if(msg.isForThisRobot()) {
+						System.out.println("msg in router: " + msg);
+						System.out.println("class: " + msg.msg.getClass());
+						System.out.println("listeners: " + this.listeners);
+//						for(RadioListener l : this.listeners.get(msg.msg.get)) {
+//							l.handleMessage(msg);
+//						}
+					}
 				}
 				
 			} catch (IOException e) {
@@ -98,5 +140,21 @@ public class RadioController {
 				e.printStackTrace();
 			}
 		}
+	}
+	protected boolean validMessage(Message msg) {
+		// these tests ensure that the number of fields is right
+		// to make this a probable message from our team. 
+		if(msg.ints.length!=1) return false;
+		if(msg.strings.length != 1) return false;
+		if(msg.locations != null) return false;
+		
+		// now do the more rigorous check - does the hashcode of the message string
+		// match the int in the ints field?
+		StringBuilder builder = new StringBuilder();
+		builder.append(msg.strings[0]);
+		builder.append(RadioController.salt);
+		if(builder.toString().hashCode()!=msg.ints[0]) return false;
+		
+		return true;
 	}
 }

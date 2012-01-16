@@ -44,16 +44,16 @@ public class MessageAddress implements Serializable {
 		}
 	}
 	
-	public boolean isForRobot(BaseRobot r) {
+	public boolean isForThisRobot() {
 		
 		switch(type) {
 			case BROADCAST:
 				return true;
 			case ROBOT_ID:
-				if(r.getRc().getRobot().getID()==this.id) return true;
+				if(BaseRobot.robot.getRc().getRobot().getID()==this.id) return true;
 				else return false;
 			case ROBOT_TYPE:
-				if(this.robotType==r.getRc().getType()) return true;
+				if(this.robotType==BaseRobot.robot.getRc().getType()) return true;
 				else return false;
 			default:
 				return false;
