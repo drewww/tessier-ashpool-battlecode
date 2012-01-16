@@ -118,11 +118,15 @@ public class RadioController {
 		Message[] messages = this.r.getRc().getAllMessages();
 		System.out.println("received " + messages.length + " messages");
 		for(Message m : messages) {
+			
+			// skip invalid messages
+			if(!this.validMessage(m)) continue;
+			
 			ByteArrayInputStream byteIn = new ByteArrayInputStream(m.strings[0].getBytes());
 			try {
 				ObjectInputStream in = new ObjectInputStream(byteIn);
 				Object nextObject = in.readObject();
-				
+	
 				if(nextObject.getClass() == MessageWrapper.class) {
 					MessageWrapper msg = (MessageWrapper)nextObject;
 					if(msg.isForThisRobot()) {
@@ -141,12 +145,16 @@ public class RadioController {
 			}
 		}
 	}
+	
 	protected boolean validMessage(Message msg) {
 		// these tests ensure that the number of fields is right
 		// to make this a probable message from our team. 
+		if(msg.ints==null) return false;
+		if(msg.strings==null) return false;
+		if(msg.locations != null) return false;
+		
 		if(msg.ints.length!=1) return false;
 		if(msg.strings.length != 1) return false;
-		if(msg.locations != null) return false;
 
 		// now do the more rigorous check - does the hashcode of the message string
 		// match the int in the ints field?
