@@ -15,9 +15,13 @@ public abstract class BaseRobot {
 	protected StateCache cache;
 	protected RadioController radio; 
 	protected RadarController radar;
+	
+	public static BaseRobot robot;
 
 	public BaseRobot(RobotController myRc) {
 		this.rc = myRc;
+		
+		BaseRobot.robot = this;
 	}
 
 	// This is my helpful comment about this function!

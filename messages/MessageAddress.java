@@ -1,0 +1,91 @@
+package team035.messages;
+
+import java.io.Serializable;
+
+import team035.robots.BaseRobot;
+import battlecode.common.Clock;
+import battlecode.common.RobotType;
+
+public class MessageAddress implements Serializable {
+	private static final long serialVersionUID = -4788626538734887703L;
+
+	public enum AddressType {
+		BROADCAST,
+		ROBOT_ID,
+		ROBOT_TYPE
+	}
+
+	public AddressType type;
+	public int id;
+	public RobotType robotType;
+	public int sentAt;
+	
+	public MessageAddress(AddressType t, int id) {
+		sentAt = Clock.getRoundNum();
+		if(t == AddressType.ROBOT_ID) {
+			this.type = t;
+			this.id = id;
+		} else {
+			System.out.println("ERR: Tried to make a MessageAddress with an int and an AddressType other than ROBOT_ID");
+		}
+	}
+	
+	public MessageAddress(AddressType t, RobotType robotType) {
+		sentAt = Clock.getRoundNum();
+
+		if(t == AddressType.ROBOT_TYPE) {
+			this.type = t;
+			this.robotType = robotType;
+		} else {
+			System.out.println("ERR: Tried to make a MessageAddress with a RobotType and an AddressType other than ROBOT_TYPE");
+		}
+	}
+	
+	public MessageAddress(AddressType t) {
+		sentAt = Clock.getRoundNum();
+
+		if(t == AddressType.BROADCAST) {
+			this.type = t;
+		} else {
+			System.out.println("ERR: Tried to make a MessageAddress with no args and an AddressType other than BROADCAST");
+		}
+	}
+	
+	public boolean isForThisRobot() {
+		if(Clock.getRoundNum()-this.sentAt > 1) return false;
+		
+		switch(type) {
+			case BROADCAST:
+				return true;
+			case ROBOT_ID:
+				if(BaseRobot.robot.getRc().getRobot().getID()==this.id) return true;
+				else return false;
+			case ROBOT_TYPE:
+				if(this.robotType==BaseRobot.robot.getRc().getType()) return true;
+				else return false;
+			default:
+				return false;
+		}
+		
+	}
+	
+	public String toString() {
+		String out= "";
+		switch(type) {
+			case BROADCAST:
+				out = "@" + type;
+				break;
+			case ROBOT_ID:
+				out = "@" + type + "." + id;
+				break;
+			case ROBOT_TYPE:
+				out = "@" + type + "." + robotType;
+				break;
+			default:
+				out = "@" + type;
+				break;
+		}
+		
+		return out + " (" + this.sentAt + ")";
+	}
+}
