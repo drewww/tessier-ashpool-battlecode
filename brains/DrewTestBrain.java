@@ -44,7 +44,7 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 		try {
 			go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
 			if(go!=null) {
-				this.r.getRc().transferFlux(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, 10);
+				this.r.getRc().transferFlux(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, 40);
 			}
 		} catch (GameActionException e1) {
 			// TODO Auto-generated catch block
@@ -56,7 +56,7 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 		
 		
 		
-		if(this.r.getRc().getFlux() > RobotType.SOLDIER.spawnCost+10) {
+		if(this.r.getRc().getFlux() > RobotType.SOLDIER.spawnCost+40) {
 			try {
 				this.r.getRc().spawn(RobotType.SOLDIER);
 				spawnedLastTurn = true;
@@ -76,7 +76,7 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 			e.printStackTrace();
 		}
 		
-		MapLocation l = this.r.getRc().getLocation().add(30, 30);
+		MapLocation l = this.r.getRc().getLocation().add(-20, -60);
 		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(l));
 	}
 

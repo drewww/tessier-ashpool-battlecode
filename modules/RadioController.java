@@ -148,8 +148,8 @@ public class RadioController {
 					System.out.println("message: " + msg);
 
 					if(msg.isForThisRobot()) {
-						System.out.println("received message of type: " + msg.msg.getType());
-
+						if(this.listeners.get(msg.msg.getType()) == null) continue;
+						
 						for(RadioListener l : this.listeners.get(msg.msg.getType())) {
 							l.handleMessage(msg);
 						}
