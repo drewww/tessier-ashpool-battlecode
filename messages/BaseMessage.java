@@ -4,6 +4,4 @@ import battlecode.common.RobotInfo;
 
 public abstract class BaseMessage implements RobotMessage {
 	public RobotInfo sender;
-	
-	public abstract String getType();
 }

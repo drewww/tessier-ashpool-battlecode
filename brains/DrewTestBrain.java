@@ -22,8 +22,6 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 
 	@Override
 	public void think() {
-		// Leaving this empty in the repo for people to add testing code as they so desire.
-		
 		// this is some extra test brain content blah blah
 		this.r.getCache().getEnemyRobots();
 		this.r.getCache().getFriendlyRobots();

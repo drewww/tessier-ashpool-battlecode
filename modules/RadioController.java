@@ -123,12 +123,9 @@ public class RadioController {
 				if(nextObject.getClass() == MessageWrapper.class) {
 					MessageWrapper msg = (MessageWrapper)nextObject;
 					if(msg.isForThisRobot()) {
-						System.out.println("msg in router: " + msg);
-						System.out.println("class: " + msg.msg.getClass());
-						System.out.println("listeners: " + this.listeners);
-//						for(RadioListener l : this.listeners.get(msg.msg.get)) {
-//							l.handleMessage(msg);
-//						}
+						for(RadioListener l : this.listeners.get(msg.msg.getType())) {
+							l.handleMessage(msg);
+						}
 					}
 				}
 				
