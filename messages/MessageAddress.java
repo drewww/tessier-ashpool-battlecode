@@ -3,6 +3,7 @@ package team035.messages;
 import java.io.Serializable;
 
 import team035.robots.BaseRobot;
+import battlecode.common.Clock;
 import battlecode.common.RobotType;
 
 public class MessageAddress implements Serializable {
@@ -17,8 +18,10 @@ public class MessageAddress implements Serializable {
 	public AddressType type;
 	public int id;
 	public RobotType robotType;
+	public int sentAt;
 	
 	public MessageAddress(AddressType t, int id) {
+		sentAt = Clock.getRoundNum();
 		if(t == AddressType.ROBOT_ID) {
 			this.type = t;
 			this.id = id;
@@ -28,6 +31,8 @@ public class MessageAddress implements Serializable {
 	}
 	
 	public MessageAddress(AddressType t, RobotType robotType) {
+		sentAt = Clock.getRoundNum();
+
 		if(t == AddressType.ROBOT_TYPE) {
 			this.type = t;
 			this.robotType = robotType;
@@ -37,6 +42,8 @@ public class MessageAddress implements Serializable {
 	}
 	
 	public MessageAddress(AddressType t) {
+		sentAt = Clock.getRoundNum();
+
 		if(t == AddressType.BROADCAST) {
 			this.type = t;
 		} else {
@@ -45,6 +52,7 @@ public class MessageAddress implements Serializable {
 	}
 	
 	public boolean isForThisRobot() {
+		if(Clock.getRoundNum()-this.sentAt > 1) return false;
 		
 		switch(type) {
 			case BROADCAST:
@@ -62,16 +70,22 @@ public class MessageAddress implements Serializable {
 	}
 	
 	public String toString() {
-		
+		String out= "";
 		switch(type) {
 			case BROADCAST:
-				return "@" + type;
+				out = "@" + type;
+				break;
 			case ROBOT_ID:
-				return "@" + type + "." + id;
+				out = "@" + type + "." + id;
+				break;
 			case ROBOT_TYPE:
-				return "@" + type + "." + robotType;
+				out = "@" + type + "." + robotType;
+				break;
 			default:
-				return "@" + type;
+				out = "@" + type;
+				break;
 		}
+		
+		return out + " (" + this.sentAt + ")";
 	}
 }
