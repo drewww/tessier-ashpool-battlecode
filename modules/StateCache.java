@@ -3,6 +3,7 @@ package team035.modules;
 import team035.robots.BaseRobot;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
+import battlecode.common.PowerNode;
 import battlecode.common.RobotInfo;
 
 public class StateCache {
@@ -99,6 +100,14 @@ public class StateCache {
 	//TODO Need to cache this
 	public boolean canMove(Direction direction) {
 		return this.r.getRc().canMove(direction);
+	}
+	
+	public PowerNode[] senseAlliedPowerNodes() {
+		return this.r.getRc().senseAlliedPowerNodes();
+	}
+	
+	public MapLocation[] senseCapturablePowerNodes() {
+		return this.r.getRc().senseCapturablePowerNodes();
 	}
 	
 }
