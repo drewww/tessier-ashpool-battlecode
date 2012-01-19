@@ -27,6 +27,7 @@ public class RadioController {
 
 	public static final int MAX_MESSAGES_PER_TURN = 20;
 
+	protected boolean enabled = true;
 
 	// there's one of these for each message type, which has N objects that
 	// want to be notified about messages of that type.
@@ -38,6 +39,9 @@ public class RadioController {
 		this.newRound();
 	}
 
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
 
 	public void addListener(RadioListener listener, String messageClass) {
 		String[] classes = new String[1];
@@ -126,6 +130,8 @@ public class RadioController {
 	// any listeners on that message type, alert the listeners to the
 	// existence of the message.
 	public void receive() {
+		if(!this.enabled) return;
+		
 		Message[] messages = this.r.getRc().getAllMessages();
 		for(Message m : messages) {
 
