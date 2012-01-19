@@ -55,7 +55,7 @@ public class ArchonBrain extends RobotBrain {
 		for(MapLocation nodeLoc: emptyNodes) {
 			System.out.println("Detected node at: " + nodeLoc);
 			if(nodeLoc.distanceSquaredTo(myLoc) < NODE_DETECTION_RADIUS_SQ) {
-				this.r.getNav().setTarget(nodeLoc.add(Direction.SOUTH));				
+				this.r.getNav().setTarget(nodeLoc, true);				
 				this.nodeBuildLocation = nodeLoc;
 				this.state = ArchonState.BUILDING;
 				System.out.println("Archon loitering->building");
@@ -73,8 +73,8 @@ public class ArchonBrain extends RobotBrain {
 		System.out.println("Heading for neighbor " + rNum);
 		MapLocation target = nodeNeighbors[rNum];
 		// Move south of the target so we're not standing on it...
-		target = target.add(Direction.SOUTH);
-		this.r.getNav().setTarget(target);
+		//target = target.add(Direction.SOUTH);
+		this.r.getNav().setTarget(target, true);
 		this.sendMoveOrder(target);
 		this.state = ArchonState.MOVING;
 		System.out.println("Archon loitering->moving");

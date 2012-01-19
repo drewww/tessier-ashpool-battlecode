@@ -13,13 +13,15 @@ public class NavController {
 
 	protected BaseRobot r;
 	protected MapLocation target;
+	protected MapLocation dockingTarget;
 	protected Mode mode;
+	protected Mode preBuggingMode;
 	protected Direction bugDirection;
 	
 	protected static final Direction[] compass = {
 			Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
 			Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
-			Direction.WEST
+			Direction.WEST, Direction.NORTH_WEST
 		};
 	
 	protected int nextDockingLoc;
@@ -29,26 +31,31 @@ public class NavController {
 		this.r = r;
 		this.mode = Mode.PATHING;
 		this.bugDirection = Direction.NONE;
-		this.resetDocking();
-		
 	}
 
 	protected void resetDocking() {
 		this.nextDockingLoc = 0;
+		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
 	}
 	
-	protected void 
+	protected void setNextDockingTarget() {
+		this.nextDockingLoc++;
+		this.nextDockingLoc %= NavController.compass.length;
+		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
+	}
 	
 	public void setTarget(MapLocation loc) {
 		this.setTarget(loc, false);
 	}
 	
 	public void setTarget(MapLocation loc, boolean isDocking) {
-			this.target = loc;
 			if(true == isDocking) {
 				this.mode = Mode.DOCKING;
+				this.dockingTarget = loc;
+				this.resetDocking();
 			} else {
 				this.mode = Mode.PATHING;
+				this.target = loc;
 			}
 	}
 	
@@ -71,6 +78,9 @@ public class NavController {
 			switch(this.mode) {
 			case PATHING:
 				moved = this.doPathingMove();
+				break;
+			case DOCKING:
+				moved = this.doDockingMove();
 				break;
 			case BUGGING:
 				moved = this.doBuggingMove();
@@ -101,6 +111,7 @@ public class NavController {
 					return true;
 				} else {
 					// enter bugging mode
+					this.preBuggingMode = this.mode;
 					this.mode = Mode.BUGGING;
 					return this.setInitialBuggingDirection();
 				}
@@ -111,6 +122,18 @@ public class NavController {
 		}
 		return false;
 
+	}
+	
+	protected boolean doDockingMove() {
+		RobotController rc = this.r.getRc();
+		boolean success = this.doPathingMove();
+		MapLocation robotLoc = rc.getLocation(); 
+		if(robotLoc.distanceSquaredTo(this.target) == 1) {
+			if(!rc.canMove(robotLoc.directionTo(this.target))) {
+				this.setNextDockingTarget();
+			}
+		}
+		return success;
 	}
 	
 	protected boolean setInitialBuggingDirection() {
@@ -152,7 +175,7 @@ public class NavController {
 		try {
 			if(cache.canMove(targetHeading)) {
 				rc.setDirection(targetHeading);
-				this.mode = Mode.PATHING;
+				this.mode = this.preBuggingMode;
 				return true;
 			}
 			else {
