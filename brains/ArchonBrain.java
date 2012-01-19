@@ -81,8 +81,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
         MapLocation myLoc = rc.getLocation();
         
         // If we can sense a place to build a tower, grab it
-MapLocation nearNodeLoc = getNearestCapturableNode();
-        this.r.getNav().setTarget(nearNodeLoc, true);                
+        MapLocation nearNodeLoc = getNearestCapturableNode();
+
+        this.r.getNav().setTarget(nearNodeLoc, true);
+        this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
+        
         this.state = ArchonState.MOVING;
         System.out.println("Archon loitering->moving");
         this.nodeBuildLocation = nearNodeLoc;
@@ -135,29 +138,22 @@ MapLocation nearNodeLoc = getNearestCapturableNode();
 			System.out.println("Archon moving->building");			
 			build();
 		}
-		
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
 	}	
 	
-	protected void sendMoveOrder(MapLocation target) {
-		
-	}
-	
-	protected void moveToRandomNodeNeighbor(PowerNode node) {
-		MapLocation[] nodeNeighbors = node.neighbors();
-		System.out.println("Found " + nodeNeighbors.length + " neighbors");
-		Random rng = new Random(Clock.getRoundNum() + r.getRc().getRobot().getID());
-		int rNum = rng.nextInt(nodeNeighbors.length);
-		System.out.println("Heading for neighbor " + rNum);
-		MapLocation target = nodeNeighbors[rNum];
-		// Move south of the target so we're not standing on it...
-		target = target.add(Direction.SOUTH);
-		this.r.getNav().setTarget(target);
-		this.sendMoveOrder(target);
-		this.state = ArchonState.MOVING;
-		System.out.println("Archon loitering->moving");
-		this.move();
-	}
+//	protected void moveToRandomNodeNeighbor(PowerNode node) {
+//		MapLocation[] nodeNeighbors = node.neighbors();
+//		System.out.println("Found " + nodeNeighbors.length + " neighbors");
+//		Random rng = new Random(Clock.getRoundNum() + r.getRc().getRobot().getID());
+//		int rNum = rng.nextInt(nodeNeighbors.length);
+//		System.out.println("Heading for neighbor " + rNum);
+//		MapLocation target = nodeNeighbors[rNum];
+//		// Move south of the target so we're not standing on it...
+//		target = target.add(Direction.SOUTH);
+//		this.r.getNav().setTarget(target);
+//		this.state = ArchonState.MOVING;
+//		System.out.println("Archon loitering->moving");
+//		this.move();
+//	}
 	
 	protected boolean spawnRobotIfPossible() {
 		
@@ -198,18 +194,7 @@ MapLocation nearNodeLoc = getNearestCapturableNode();
 	@Override
 	public void handleMessage(MessageWrapper msg) {
 //		if(msg.msg.getType()==ClaimNodeMessage.type) {
-//			MapLocation nodeLoc = r.getNav().getTarget().add(Direction.NORTH);
-//			try {
-//				PowerNode node = (PowerNode) r.getRc().senseObjectAtLocation(nodeLoc, RobotLevel.POWER_NODE);
-//				if(node == null) {
-//					this.state = ArchonState.LOITERING;
-//					return;
-//				}
-//				moveToRandomNodeNeighbor(node);
-//			} catch (GameActionException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
+//			this.state = ArchonState.LOITERING;
 //		}
 	}
 	
