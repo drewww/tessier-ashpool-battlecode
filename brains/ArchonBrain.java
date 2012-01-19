@@ -53,6 +53,7 @@ public class ArchonBrain extends RobotBrain {
 		// If we can sense a place to build a tower, grab it
 		MapLocation[] emptyNodes = cache.senseCapturablePowerNodes();
 		for(MapLocation nodeLoc: emptyNodes) {
+			System.out.println("Detected node at: " + nodeLoc);
 			if(nodeLoc.distanceSquaredTo(myLoc) < NODE_DETECTION_RADIUS_SQ) {
 				this.r.getNav().setTarget(nodeLoc.add(Direction.SOUTH));				
 				this.nodeBuildLocation = nodeLoc;

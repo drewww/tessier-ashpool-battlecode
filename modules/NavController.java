@@ -8,25 +8,52 @@ import battlecode.common.RobotController;
 
 public class NavController {
 	protected enum Mode {
-		PATHING, BUGGING
+		PATHING, BUGGING, DOCKING
 	}
 
 	protected BaseRobot r;
 	protected MapLocation target;
 	protected Mode mode;
 	protected Direction bugDirection;
+	
+	protected static final Direction[] compass = {
+			Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
+			Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
+			Direction.WEST
+		};
+	
+	protected int nextDockingLoc;
 
 
 	public NavController(BaseRobot r) {
 		this.r = r;
 		this.mode = Mode.PATHING;
 		this.bugDirection = Direction.NONE;
+		this.resetDocking();
+		
 	}
 
+	protected void resetDocking() {
+		this.nextDockingLoc = 0;
+	}
+	
+	protected void 
+	
 	public void setTarget(MapLocation loc) {
-		this.target = loc;
+		this.setTarget(loc, false);
 	}
-
+	
+	public void setTarget(MapLocation loc, boolean isDocking) {
+			this.target = loc;
+			if(true == isDocking) {
+				this.mode = Mode.DOCKING;
+			} else {
+				this.mode = Mode.PATHING;
+			}
+	}
+	
+	
+	
 	public Direction getDesiredHeading() {
 		MapLocation myLoc = this.r.getRc().getLocation();
 		return myLoc.directionTo(this.target);
