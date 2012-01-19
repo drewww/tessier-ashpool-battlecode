@@ -80,8 +80,6 @@ public class RadioController {
 				if(wrapper==null) {
 					break;
 				}
-
-				System.out.println("about to send: " + wrapper);
 				out.writeObject(wrapper);
 				messagesWritten++;
 			}
@@ -129,12 +127,10 @@ public class RadioController {
 	// existence of the message.
 	public void receive() {
 		Message[] messages = this.r.getRc().getAllMessages();
-		System.out.println("received " + messages.length + " messages");
 		for(Message m : messages) {
 
 			// skip invalid messages
 			if(!this.validMessage(m)) {
-				System.out.println("skipping invalid message");
 				continue;
 			}
 			
@@ -145,8 +141,6 @@ public class RadioController {
 	
 				if(nextObject.getClass() == MessageWrapper.class) {
 					MessageWrapper msg = (MessageWrapper)nextObject;
-					System.out.println("message: " + msg);
-
 					if(msg.isForThisRobot()) {
 						if(this.listeners.get(msg.msg.getType()) == null) continue;
 						
@@ -180,7 +174,6 @@ public class RadioController {
 		if(msg.ints.length!=1) return false;
 		if(msg.strings.length != 1) return false;
 
-		System.out.println("Checking hash validity now...");
 		// now do the more rigorous check - does the hashcode of the message string
 		// match the int in the ints field?
 		StringBuilder builder = new StringBuilder();
@@ -188,7 +181,6 @@ public class RadioController {
 		builder.append(RadioController.salt);
 		if(builder.toString().hashCode()!=msg.ints[0]) return false;
 
-		System.out.println("valid!");
 		return true;
 	}
 }
