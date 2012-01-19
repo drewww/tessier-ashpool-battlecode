@@ -5,6 +5,8 @@ import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotLevel;
+import battlecode.common.TerrainTile;
 
 public class NavController {
 	protected enum Mode {
@@ -24,7 +26,7 @@ public class NavController {
 			Direction.WEST, Direction.NORTH_WEST
 		};
 	
-	protected int nextDockingLoc;
+//	protected int nextDockingLoc;
 
 
 	public NavController(BaseRobot r) {
@@ -34,16 +36,16 @@ public class NavController {
 	}
 
 	protected void resetDocking() {
-		this.nextDockingLoc = 0;
-		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
+//		this.nextDockingLoc = 0;
+		this.target = this.dockingTarget.add(Direction.SOUTH);
 	}
 	
-	protected void setNextDockingTarget() {
-		this.nextDockingLoc++;
-		this.nextDockingLoc %= NavController.compass.length;
-		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
-	}
-	
+//	protected void setNextDockingTarget() {
+//		this.nextDockingLoc++;
+//		this.nextDockingLoc %= NavController.compass.length;
+//		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
+//	}
+//	
 	public void setTarget(MapLocation loc) {
 		this.setTarget(loc, false);
 	}
@@ -127,13 +129,34 @@ public class NavController {
 	protected boolean doDockingMove() {
 		RobotController rc = this.r.getRc();
 		boolean success = this.doPathingMove();
-		MapLocation robotLoc = rc.getLocation(); 
-		if(robotLoc.distanceSquaredTo(this.target) == 1) {
-			if(!rc.canMove(robotLoc.directionTo(this.target))) {
-				this.setNextDockingTarget();
+		MapLocation robotLoc = rc.getLocation();
+		// check to see if the intended target is blocked. if so, try to choose a different
+		// blocking target
+		if(robotLoc.distanceSquaredTo(this.target)+2 <= rc.getType().sensorRadiusSquared) {
+			if(!isClearLoc(this.target)) {
+				for(Direction testDir : compass) {
+					MapLocation testLoc = this.dockingTarget.add(testDir);
+					if(isClearLoc(testLoc)) {
+						this.target = testLoc;
+					}
+				}
 			}
 		}
 		return success;
+	}
+	
+	protected boolean isClearLoc(MapLocation loc) {
+		RobotController rc = this.r.getRc();
+		try {
+			if(rc.senseObjectAtLocation(loc, RobotLevel.ON_GROUND) == null &&
+					rc.senseTerrainTile(loc) == TerrainTile.LAND) {
+				return true;
+			}
+		} catch (GameActionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
 	}
 	
 	protected boolean setInitialBuggingDirection() {
