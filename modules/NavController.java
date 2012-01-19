@@ -15,6 +15,7 @@ public class NavController {
 	protected MapLocation target;
 	protected Mode mode;
 	protected Direction bugDirection;
+	private int epsilon;
 
 
 	public NavController(BaseRobot r) {
@@ -24,7 +25,12 @@ public class NavController {
 	}
 
 	public void setTarget(MapLocation loc) {
+		this.setTarget(loc, 0);
+	}
+	
+	public void setTarget(MapLocation loc, int epsilon) {
 		this.target = loc;
+		this.epsilon = epsilon;
 	}
 	
 	public MapLocation getTarget() {
@@ -59,8 +65,27 @@ public class NavController {
 		return moved;
 	}
 
+	int withinEpsilon = 0;
 	public boolean isAtTarget() {
-		return target.equals(this.r.getRc().getLocation());
+		
+		int distance =target.distanceSquaredTo(this.r.getRc().getLocation());
+		
+		if(distance==0) {
+			withinEpsilon = 0;
+			return true;
+		}
+		if(distance <= this.epsilon*this.epsilon) {
+			withinEpsilon++;
+			
+			if(withinEpsilon > 3) {
+				withinEpsilon = 0;
+				return true;
+			}
+		} else {
+			withinEpsilon = 0;
+		}
+		
+		return false;
 	}
 
 	protected boolean doPathingMove() {
@@ -73,7 +98,7 @@ public class NavController {
 				return true;
 			}
 			else {
-				if(cache.canMove(moveHeading)) {
+				if(canMoveForward()) {
 					rc.moveForward();
 					return true;
 				} else {
@@ -88,6 +113,29 @@ public class NavController {
 		}
 		return false;
 
+	}
+	
+	protected boolean canMoveForward() {
+		boolean canMove = false;
+		switch (r.getRc().getType()) {
+		case SOLDIER:
+			MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
+			MapLocation frontLoc = r.getRc().getLocation().add(r.getRc().getDirection());
+			for (MapLocation loc :nodeLocs) {
+				if(frontLoc.equals(loc.add(Direction.SOUTH))) {
+					return false;
+				}
+			}
+			if(!r.getCache().canMove(r.getRc().getDirection())) {
+				return false;
+			}
+			break;
+		case ARCHON:
+			if(!r.getCache().canMove(r.getRc().getDirection())) {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	protected boolean setInitialBuggingDirection() {
@@ -133,8 +181,7 @@ public class NavController {
 				return true;
 			}
 			else {
-				Direction heading = rc.getDirection();
-				if(cache.canMove(heading)) {
+				if(canMoveForward()) {
 					rc.moveForward();
 					return true;
 				} else {

@@ -102,7 +102,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// if we get a move order message, update our move destination.
 
 			System.out.println("updating move target to: " + mom.moveTo);
-			this.r.getNav().setTarget(mom.moveTo);
+			this.r.getNav().setTarget(mom.moveTo, 3);
 			
 			if(this.state==SoldierState.HOLD) {
 				this.state = SoldierState.MOVE;
