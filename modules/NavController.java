@@ -63,6 +63,10 @@ public class NavController {
 	
 	
 	
+	public MapLocation getTarget() {
+		return this.target;
+	}
+
 	public Direction getDesiredHeading() {
 		MapLocation myLoc = this.r.getRc().getLocation();
 		return myLoc.directionTo(this.target);

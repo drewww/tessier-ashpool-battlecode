@@ -2,6 +2,8 @@ package team035.brains;
 
 import java.util.Random;
 
+import team035.messages.MessageAddress;
+import team035.messages.MoveOrderMessage;
 import team035.modules.NavController;
 import team035.modules.StateCache;
 import team035.robots.BaseRobot;
@@ -17,13 +19,17 @@ import battlecode.common.RobotType;
 
 public class ArchonBrain extends RobotBrain {
 	protected final static double NODE_DETECTION_RADIUS_SQ = 16;
-	
+	protected final static double INITIAL_ROBOT_FLUX = 30;
+
+
 	protected enum ArchonState {
 		LOITERING, MOVING, BUILDING
 	}
 
 	protected ArchonState state;
 	protected MapLocation nodeBuildLocation;
+	
+	protected boolean fluxTransferQueued = false;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -32,6 +38,23 @@ public class ArchonBrain extends RobotBrain {
 
 	@Override
 	public void think() {
+		
+		if(fluxTransferQueued) {
+			
+			GameObject go;
+			try {
+				go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
+				if(go!=null) {
+					this.r.getRc().transferFlux(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, INITIAL_ROBOT_FLUX*0.9);
+				}
+			} catch (GameActionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			fluxTransferQueued = false;
+		} 
+		
 		switch(this.state) {
 		case LOITERING:
 			loiter();
@@ -93,6 +116,9 @@ public class ArchonBrain extends RobotBrain {
 	}
 	
 	protected void move() {
+		
+		this.spawnRobotIfPossible();
+		
 		NavController nav = this.r.getNav();
 		nav.doMove();
 		if(nav.isAtTarget()) {
@@ -100,12 +126,32 @@ public class ArchonBrain extends RobotBrain {
 			System.out.println("Archon moving->loitering");			
 			loiter();
 		}
+		
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
 	}	
 	
 	protected void sendMoveOrder(MapLocation target) {
 		
 	}
 	
+	
+	protected boolean spawnRobotIfPossible() {
+		
+		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > RobotType.SOLDIER.spawnCost + INITIAL_ROBOT_FLUX) {
+			
+			if(r.getRc().canMove(r.getRc().getDirection())) {
+				try {
+					r.getRc().spawn(RobotType.SOLDIER);
+					fluxTransferQueued = true;
+					return true;
+				} catch (GameActionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+		return false;
+	}
 	
 	// Helper stuffs
 	protected PowerNode getNearestAlliedNode() {
