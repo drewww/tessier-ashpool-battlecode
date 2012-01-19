@@ -5,17 +5,29 @@ import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotLevel;
+import battlecode.common.TerrainTile;
 
 public class NavController {
 	protected enum Mode {
-		PATHING, BUGGING
+		PATHING, BUGGING, DOCKING
 	}
 
 	protected BaseRobot r;
 	protected MapLocation target;
+	protected MapLocation dockingTarget;
 	protected Mode mode;
+	protected Mode preBuggingMode;
 	protected Direction bugDirection;
 	private int epsilon;
+	
+	protected static final Direction[] compass = {
+			Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
+			Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
+			Direction.WEST, Direction.NORTH_WEST
+		};
+	
+//	protected int nextDockingLoc;
 
 
 	public NavController(BaseRobot r) {
@@ -24,6 +36,17 @@ public class NavController {
 		this.bugDirection = Direction.NONE;
 	}
 
+	protected void resetDocking() {
+//		this.nextDockingLoc = 0;
+		this.target = this.dockingTarget.add(Direction.SOUTH);
+	}
+	
+//	protected void setNextDockingTarget() {
+//		this.nextDockingLoc++;
+//		this.nextDockingLoc %= NavController.compass.length;
+//		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
+//	}
+//	
 	public void setTarget(MapLocation loc) {
 		this.setTarget(loc, 0);
 	}
@@ -32,6 +55,19 @@ public class NavController {
 		this.target = loc;
 		this.epsilon = epsilon;
 	}
+	
+	public void setTarget(MapLocation loc, boolean isDocking) {
+			if(true == isDocking) {
+				this.mode = Mode.DOCKING;
+				this.dockingTarget = loc;
+				this.resetDocking();
+			} else {
+				this.mode = Mode.PATHING;
+				this.setTarget(loc, 0);
+			}
+	}
+	
+	
 	
 	public MapLocation getTarget() {
 		return this.target;
@@ -54,6 +90,9 @@ public class NavController {
 			switch(this.mode) {
 			case PATHING:
 				moved = this.doPathingMove();
+				break;
+			case DOCKING:
+				moved = this.doDockingMove();
 				break;
 			case BUGGING:
 				moved = this.doBuggingMove();
@@ -103,6 +142,7 @@ public class NavController {
 					return true;
 				} else {
 					// enter bugging mode
+					this.preBuggingMode = this.mode;
 					this.mode = Mode.BUGGING;
 					return this.setInitialBuggingDirection();
 				}
@@ -136,6 +176,39 @@ public class NavController {
 			}
 		}
 		return true;
+	}
+		
+	protected boolean doDockingMove() {
+		RobotController rc = this.r.getRc();
+		boolean success = this.doPathingMove();
+		MapLocation robotLoc = rc.getLocation();
+		// check to see if the intended target is blocked. if so, try to choose a different
+		// blocking target
+		if(robotLoc.distanceSquaredTo(this.target)+2 <= rc.getType().sensorRadiusSquared) {
+			if(!isClearLoc(this.target)) {
+				for(Direction testDir : compass) {
+					MapLocation testLoc = this.dockingTarget.add(testDir);
+					if(isClearLoc(testLoc)) {
+						this.target = testLoc;
+					}
+				}
+			}
+		}
+		return success;
+	}
+	
+	protected boolean isClearLoc(MapLocation loc) {
+		RobotController rc = this.r.getRc();
+		try {
+			if(rc.senseObjectAtLocation(loc, RobotLevel.ON_GROUND) == null &&
+					rc.senseTerrainTile(loc) == TerrainTile.LAND) {
+				return true;
+			}
+		} catch (GameActionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
 	}
 	
 	protected boolean setInitialBuggingDirection() {
@@ -177,7 +250,7 @@ public class NavController {
 		try {
 			if(cache.canMove(targetHeading)) {
 				rc.setDirection(targetHeading);
-				this.mode = Mode.PATHING;
+				this.mode = this.preBuggingMode;
 				return true;
 			}
 			else {

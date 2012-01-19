@@ -76,27 +76,17 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void loiter() {
-		StateCache cache = r.getCache();
-		RobotController rc = r.getRc();
-		MapLocation myLoc = rc.getLocation();
-		
-		// If we can sense a place to build a tower, grab it
-		MapLocation[] emptyNodes = cache.senseCapturablePowerNodes();
-		for(MapLocation nodeLoc: emptyNodes) {
-			if(nodeLoc.distanceSquaredTo(myLoc) < NODE_DETECTION_RADIUS_SQ) {
-				this.r.getNav().setTarget(nodeLoc.add(Direction.SOUTH));
-				this.nodeBuildLocation = nodeLoc;
-				this.state = ArchonState.BUILDING;
-				System.out.println("Archon loitering->building");
-				this.build();
-				return;
-			}
-		}
-		
-		// Look at where we're connected to and try to go there!
-		PowerNode nearestNode = getNearestAlliedNode();
-		moveToRandomNodeNeighbor(nearestNode);
-		return;
+        StateCache cache = r.getCache();
+        RobotController rc = r.getRc();
+        MapLocation myLoc = rc.getLocation();
+        
+        // If we can sense a place to build a tower, grab it
+MapLocation nearNodeLoc = getNearestCapturableNode();
+        this.r.getNav().setTarget(nearNodeLoc, true);                
+        this.state = ArchonState.MOVING;
+        System.out.println("Archon loitering->moving");
+        this.nodeBuildLocation = nearNodeLoc;
+        this.move();
 	}
 	
 	protected void build() {
@@ -141,9 +131,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		NavController nav = this.r.getNav();
 		nav.doMove();
 		if(nav.isAtTarget()) {
-			this.state = ArchonState.LOITERING;
-			System.out.println("Archon moving->loitering");			
-			loiter();
+			this.state = ArchonState.BUILDING;
+			System.out.println("Archon moving->building");			
+			build();
 		}
 		
 		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
@@ -223,5 +213,23 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 //		}
 	}
 	
-
+	// Helper stuffs
+	protected MapLocation getNearestCapturableNode() {
+		StateCache cache = r.getCache();		
+		RobotController rc = r.getRc();
+		MapLocation[] capturableNodes = cache.senseCapturablePowerNodes();
+		MapLocation nearest = null;
+		MapLocation myLoc = rc.getLocation();
+		double bestDistance = Double.MAX_VALUE;
+		for(MapLocation loc : capturableNodes) {
+			double distance = loc.distanceSquaredTo(myLoc);
+			if(distance < bestDistance) {
+				nearest = loc;
+				bestDistance = distance;
+			}
+		}	
+		return nearest;
+	}
+	
+	
 }
