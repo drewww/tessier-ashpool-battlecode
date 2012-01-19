@@ -1,17 +1,15 @@
 package team035.robots;
 
-import team035.brains.DrewTestBrain;
-import team035.brains.OwenTestBrain;
-import team035.brains.ArchonBrain;
+import team035.brains.SoldierBrain;
 import team035.modules.NavController;
 import team035.modules.RadarController;
 import team035.modules.RadioController;
 import team035.modules.StateCache;
 import battlecode.common.RobotController;
 
-public class ArchonRobot extends BaseRobot {
-	
-	public ArchonRobot(RobotController myRc) {
+public class SoldierRobot extends BaseRobot {
+
+	public SoldierRobot(RobotController myRc) {
 		super(myRc);
 		
 		this.radar = new RadarController(this);
@@ -19,11 +17,8 @@ public class ArchonRobot extends BaseRobot {
 		this.cache = new StateCache(this);
 		this.nav = new NavController(this);
 		
-//		this.brain = new ArchonBrain(this);
-//		this.brain = new DrewTestBrain(this);
-		this.brain = new ArchonBrain(this);
-//		this.brain = new DrewTestBrain(this);
-//		this.brain = new OwenTestBrain(this);
+		this.brain = new SoldierBrain(this);
 
 	}
+
 }
