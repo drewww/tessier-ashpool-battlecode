@@ -3,6 +3,7 @@ package team035.brains;
 import java.util.Random;
 
 import team035.messages.ClaimNodeMessage;
+import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
 import team035.messages.MessageAddress.AddressType;
 import team035.messages.MessageWrapper;
@@ -41,6 +42,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.state = ArchonState.LOITERING;
 		
 		r.getRadio().addListener(this, ClaimNodeMessage.type);
+		r.getRadio().addListener(this, LowFluxMessage.type);
 	}
 
 	@Override
@@ -196,6 +198,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 //		if(msg.msg.getType()==ClaimNodeMessage.type) {
 //			this.state = ArchonState.LOITERING;
 //		}
+		
+		if(msg.msg.getType()==LowFluxMessage.type) {
+			// try to give them some flux!
+			
+		}
+		
 	}
 	
 	// Helper stuffs

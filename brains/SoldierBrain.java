@@ -1,5 +1,7 @@
 package team035.brains;
 
+import team035.messages.LowFluxMessage;
+import team035.messages.MessageAddress;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
 import team035.modules.NavController;
@@ -16,13 +18,19 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		HOLD,
 		MOVE,
 		ATTACK,
-		LOST
+		LOST,
+		LOW_FLUX,
+		OUT_OF_FLUX,
 	}
 
 	protected SoldierState state;
 
+	protected final static double PLENTY_OF_FLUX_THRESHOLD = 20.0;
+	protected final static double LOW_FLUX_THRESHOLD = 5.0;
+	protected final static double OUT_OF_FLUX = 1.0;
 	
 	protected int turnsHolding = 0;
+	protected int turnsSinceLastOutOfFluxMessage = 0;
 	
 	public SoldierBrain(BaseRobot r) {
 		super(r);
@@ -30,15 +38,39 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		state = SoldierState.HOLD;
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
+		r.getRadio().addListener(this, LowFluxMessage.type);
 	}
 
 	@Override
 	public void think() {
+		// short circuit the whole process with out of flux
+		if(this.r.getRc().getFlux() < OUT_OF_FLUX) {
+			this.state = SoldierState.OUT_OF_FLUX;
+		}
+
+		if(this.state == SoldierState.OUT_OF_FLUX) {
+			// check to see if our flux level is back up.
+			if(this.r.getRc().getFlux() > OUT_OF_FLUX) {
+				// what should we transition into? move?
+				this.state = SoldierState.HOLD;
+				
+				// turn the radio back on, etc.
+			}
+			
+			if(turnsSinceLastOutOfFluxMessage >= 20) {
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation()));
+				turnsSinceLastOutOfFluxMessage = 0;
+			}
+			turnsSinceLastOutOfFluxMessage++;
+			return;
+		}
+		
 		System.out.println("state: " + this.state);
 
 		if(r.getCache().numEnemyRobotsInRange > 0) {
 			this.state = SoldierState.ATTACK;
-		}
+		} 
+	
 		
 		switch(this.state) {
 		case HOLD:
