@@ -76,10 +76,10 @@ public class ArchonBrain extends RobotBrain {
 		// If we can sense a place to build a tower, grab it
 		MapLocation nearNodeLoc = getNearestCapturableNode();
 		this.r.getNav().setTarget(nearNodeLoc, true);		
-		this.state = ArchonState.BUILDING;
-		System.out.println("Archon loitering->building");
+		this.state = ArchonState.MOVING;
+		System.out.println("Archon loitering->moving");
 		this.nodeBuildLocation = nearNodeLoc;
-		this.build();
+		this.move();
 
 	}
 	
@@ -122,9 +122,9 @@ public class ArchonBrain extends RobotBrain {
 		NavController nav = this.r.getNav();
 		nav.doMove();
 		if(nav.isAtTarget()) {
-			this.state = ArchonState.LOITERING;
-			System.out.println("Archon moving->loitering");			
-			loiter();
+			this.state = ArchonState.BUILDING;
+			System.out.println("Archon moving->building");			
+			build();
 		}
 		
 		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
