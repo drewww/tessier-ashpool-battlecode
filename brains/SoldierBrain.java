@@ -8,6 +8,7 @@ import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.robots.BaseRobot;
 import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
@@ -43,7 +44,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 	@Override
 	public void think() {
-		// short circuit the whole process with out of flux
+		// do some global environmental state checks in order of precedence.
 		if(this.r.getRc().getFlux() < OUT_OF_FLUX) {
 			this.state = SoldierState.OUT_OF_FLUX;
 			
@@ -110,6 +111,23 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			this.state = SoldierState.MOVE;
 			turnsHolding = 0;
 			break;
+		case LOW_FLUX:
+			// if we're in low flux mode, we want to path to our nearest archon
+			// and then ask it for flux.
+			if(this.r.getRc().getFlux() > this.LOW_FLUX_THRESHOLD) {
+				this.state = SoldierState.HOLD;
+				break;
+			}
+			
+			MapLocation nearestFriendlyArchon = this.r.getCache().getNearestFriendlyArchon();
+			
+			if(this.r.getRc().getLocation().distanceSquaredTo(nearestFriendlyArchon)==2) {
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.ROBOT_TYPE, RobotType.ARCHON), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));				
+			} else {
+				this.r.getNav().setTarget(nearestFriendlyArchon, true);
+			}
+			break;
+			
 		case OUT_OF_FLUX:
 			// check to see if our flux level is back up.
 			if(this.r.getRc().getFlux() > OUT_OF_FLUX) {
@@ -120,7 +138,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			}
 			
 			if(turnsSinceLastOutOfFluxMessage >= 30) {
-				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation()));
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));
 				turnsSinceLastOutOfFluxMessage = 0;
 			}
 			turnsSinceLastOutOfFluxMessage++;

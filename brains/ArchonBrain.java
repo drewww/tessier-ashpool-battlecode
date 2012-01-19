@@ -1,7 +1,5 @@
 package team035.brains;
 
-import java.util.Random;
-
 import team035.messages.ClaimNodeMessage;
 import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
@@ -12,7 +10,6 @@ import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.modules.StateCache;
 import team035.robots.BaseRobot;
-import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameObject;
@@ -36,6 +33,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected PowerNode targetPowerNode;
 	
 	protected boolean fluxTransferQueued = false;
+	protected MapLocation fluxTransferLoc = null;
+	protected RobotLevel fluxTransferLevel = null;
+	protected double fluxTransferAmount = 0.0;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -54,7 +54,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			try {
 				go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
 				if(go!=null) {
-					this.r.getRc().transferFlux(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, INITIAL_ROBOT_FLUX*0.9);
+					this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
 				}
 			} catch (GameActionException e) {
 				// TODO Auto-generated catch block
@@ -157,6 +157,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 //		this.move();
 //	}
 	
+	protected void queueFluxTransfer(MapLocation loc, RobotLevel level, double amount) {
+		this.fluxTransferLoc = loc;
+		this.fluxTransferLevel = level;
+		this.fluxTransferAmount = amount;
+		this.fluxTransferQueued = true;
+	}
+	
 	protected boolean spawnRobotIfPossible() {
 		
 		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > RobotType.SOLDIER.spawnCost + INITIAL_ROBOT_FLUX) {
@@ -164,7 +171,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			if(r.getRc().canMove(r.getRc().getDirection())) {
 				try {
 					r.getRc().spawn(RobotType.SOLDIER);
-					fluxTransferQueued = true;
+					this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, 0.9*INITIAL_ROBOT_FLUX);;
 					return true;
 				} catch (GameActionException e) {
 					// TODO Auto-generated catch block
@@ -200,8 +207,20 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 //		}
 		
 		if(msg.msg.getType()==LowFluxMessage.type) {
-			// try to give them some flux!
+			LowFluxMessage lowFluxMessage = (LowFluxMessage) msg.msg;
 			
+			if(this.r.getRc().getLocation().distanceSquaredTo(lowFluxMessage.loc)<=2) {
+				// do a transfer.
+				if(!this.fluxTransferQueued) {
+					double amountToTransfer = INITIAL_ROBOT_FLUX*0.75;
+					
+					if(amountToTransfer > this.r.getRc().getFlux()) {
+						amountToTransfer = this.r.getRc().getFlux();
+					}
+					
+					this.queueFluxTransfer(lowFluxMessage.loc, lowFluxMessage.level, amountToTransfer);
+				}
+			}
 		}
 		
 	}
