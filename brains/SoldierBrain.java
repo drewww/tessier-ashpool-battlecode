@@ -46,30 +46,17 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		// short circuit the whole process with out of flux
 		if(this.r.getRc().getFlux() < OUT_OF_FLUX) {
 			this.state = SoldierState.OUT_OF_FLUX;
-		}
-
-		if(this.state == SoldierState.OUT_OF_FLUX) {
-			// check to see if our flux level is back up.
-			if(this.r.getRc().getFlux() > OUT_OF_FLUX) {
-				// what should we transition into? move?
-				this.state = SoldierState.HOLD;
-				
-				// turn the radio back on, etc.
-			}
 			
-			if(turnsSinceLastOutOfFluxMessage >= 20) {
-				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation()));
-				turnsSinceLastOutOfFluxMessage = 0;
-			}
-			turnsSinceLastOutOfFluxMessage++;
-			return;
-		}
-		
-		System.out.println("state: " + this.state);
-
-		if(r.getCache().numEnemyRobotsInRange > 0) {
+			// turn the radio off, shutdown the radar
+		} else if(this.r.getRc().getFlux() < LOW_FLUX_THRESHOLD) {
+			this.state = SoldierState.LOW_FLUX;
+		} else if(r.getCache().numEnemyRobotsInRange > 0) {
 			this.state = SoldierState.ATTACK;
 		} 
+
+
+		System.out.println("state: " + this.state);
+
 	
 		
 		switch(this.state) {
@@ -123,6 +110,21 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			this.state = SoldierState.MOVE;
 			turnsHolding = 0;
 			break;
+		case OUT_OF_FLUX:
+			// check to see if our flux level is back up.
+			if(this.r.getRc().getFlux() > OUT_OF_FLUX) {
+				// what should we transition into? move?
+				this.state = SoldierState.HOLD;
+				
+				// turn the radar+radio back on, etc.
+			}
+			
+			if(turnsSinceLastOutOfFluxMessage >= 30) {
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation()));
+				turnsSinceLastOutOfFluxMessage = 0;
+			}
+			turnsSinceLastOutOfFluxMessage++;
+			break;
 		}
 	}
 
@@ -139,6 +141,8 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			if(this.state==SoldierState.HOLD) {
 				this.state = SoldierState.MOVE;
 			}
+		} else if (msg.msg.getType()==LowFluxMessage.type) {
+			
 		}
 	}
 
