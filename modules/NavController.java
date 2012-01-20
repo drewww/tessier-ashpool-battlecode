@@ -10,7 +10,7 @@ import battlecode.common.TerrainTile;
 
 public class NavController {
 	protected enum Mode {
-		PATHING, BUGGING, DOCKING
+		PATHING, BUGGING, DOCKING, SPREADING
 	}
 
 	protected BaseRobot r;
@@ -25,10 +25,7 @@ public class NavController {
 			Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
 			Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
 			Direction.WEST, Direction.NORTH_WEST
-		};
-	
-//	protected int nextDockingLoc;
-
+	};
 
 	public NavController(BaseRobot r) {
 		this.r = r;
@@ -37,16 +34,9 @@ public class NavController {
 	}
 
 	protected void resetDocking() {
-//		this.nextDockingLoc = 0;
 		this.target = this.dockingTarget.add(Direction.SOUTH);
 	}
 	
-//	protected void setNextDockingTarget() {
-//		this.nextDockingLoc++;
-//		this.nextDockingLoc %= NavController.compass.length;
-//		this.target = this.dockingTarget.add(NavController.compass[this.nextDockingLoc]);
-//	}
-//	
 	public void setTarget(MapLocation loc) {
 		this.setTarget(loc, 0);
 	}
@@ -66,8 +56,6 @@ public class NavController {
 				this.setTarget(loc, 0);
 			}
 	}
-	
-	
 	
 	public MapLocation getTarget() {
 		return this.target;
@@ -233,6 +221,10 @@ public class NavController {
 					bestDistance = distance;
 				}
 			}
+		}
+		if(bestDirection == Direction.NONE) {
+			// stay put and hope things clear up.
+			return false;
 		}
 		try {
 			rc.setDirection(bestDirection);
