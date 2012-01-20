@@ -1,5 +1,7 @@
 package team035.brains;
 
+import java.util.Random;
+
 import team035.messages.ClaimNodeMessage;
 import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
@@ -10,6 +12,7 @@ import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.modules.StateCache;
 import team035.robots.BaseRobot;
+import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.GameObject;
@@ -22,6 +25,8 @@ import battlecode.common.RobotType;
 public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static double NODE_DETECTION_RADIUS_SQ = 16;
 	protected final static double INITIAL_ROBOT_FLUX = 30;
+	protected ArchonState[] stateStack;
+	protected int stateStackTop;
 
 
 	protected enum ArchonState {
@@ -39,10 +44,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
-		this.state = ArchonState.LOITERING;
 		
 		r.getRadio().addListener(this, ClaimNodeMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
+		
+		this.initStateStack();
 	}
 
 	@Override
@@ -64,7 +70,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			fluxTransferQueued = false;
 		} 
 		
-		switch(this.state) {
+		switch(this.getState()) {
 		case LOITERING:
 			loiter();
 			break;
@@ -83,12 +89,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
         MapLocation myLoc = rc.getLocation();
         
         // If we can sense a place to build a tower, grab it
-        MapLocation nearNodeLoc = getNearestCapturableNode();
+        MapLocation nearNodeLoc = getRandomCapturableNode();
 
         this.r.getNav().setTarget(nearNodeLoc, true);
         this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
         
-        this.state = ArchonState.MOVING;
+        this.popState();
+        this.pushState(ArchonState.MOVING);
         System.out.println("Archon loitering->moving");
         this.nodeBuildLocation = nearNodeLoc;
         this.move();
@@ -115,7 +122,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 						if(targetContent == null) {
 							rc.spawn(RobotType.TOWER);					
 						}
-						this.state = ArchonState.LOITERING;
+						this.popState();
+						this.pushState(ArchonState.LOITERING);
 						System.out.println("Archon building->loitering");
 						return;
 					}
@@ -136,26 +144,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		NavController nav = this.r.getNav();
 		nav.doMove();
 		if(nav.isAtTarget()) {
-			this.state = ArchonState.BUILDING;
+			this.popState();
+			this.pushState(ArchonState.BUILDING);
 			System.out.println("Archon moving->building");			
 			build();
 		}
 	}	
-	
-//	protected void moveToRandomNodeNeighbor(PowerNode node) {
-//		MapLocation[] nodeNeighbors = node.neighbors();
-//		System.out.println("Found " + nodeNeighbors.length + " neighbors");
-//		Random rng = new Random(Clock.getRoundNum() + r.getRc().getRobot().getID());
-//		int rNum = rng.nextInt(nodeNeighbors.length);
-//		System.out.println("Heading for neighbor " + rNum);
-//		MapLocation target = nodeNeighbors[rNum];
-//		// Move south of the target so we're not standing on it...
-//		target = target.add(Direction.SOUTH);
-//		this.r.getNav().setTarget(target);
-//		this.state = ArchonState.MOVING;
-//		System.out.println("Archon loitering->moving");
-//		this.move();
-//	}
 	
 	protected void queueFluxTransfer(MapLocation loc, RobotLevel level, double amount) {
 		this.fluxTransferLoc = loc;
@@ -243,5 +237,50 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		return nearest;
 	}
 	
+	// Helper stuffs
+	protected MapLocation getRandomCapturableNode() {
+		StateCache cache = r.getCache();		
+		RobotController rc = r.getRc();
+		MapLocation[] capturableNodes = cache.senseCapturablePowerNodes();
+		Random rng = new Random(this.r.getRc().getRobot().getID());
+//		System.out.println("Seed: " + this.r.getRc().getRobot().getID());
+//		System.out.println("Length: " + capturableNodes.length + " rng: " + rng.nextInt(capturableNodes.length-1));
+		return capturableNodes[rng.nextInt(capturableNodes.length)];
+	}
+
+	protected ArchonState getState() {
+		if(this.stateStackTop < 0) {
+			return ArchonState.LOITERING;
+		}
+		return this.stateStack[this.stateStackTop];
+	}
+	
+	protected void pushState(ArchonState state) {
+		this.stateStackTop++;
+		// Check to see if we need to expand the stack size
+		if(this.stateStack.length >= this.stateStackTop) {
+			ArchonState[] newStack = new ArchonState[this.stateStack.length*2];
+			for(int i = 0; i < this.stateStack.length; ++i) {
+				newStack[i] = this.stateStack[i];
+			}
+			this.stateStack = newStack;
+		}
+		this.stateStack[this.stateStackTop] = state;
+	}
+
+	protected ArchonState popState() {
+		ArchonState state = this.getState();
+		if(this.stateStackTop >= 0) {
+			this.stateStackTop--;	
+		}
+		// Push the default loitering state if somehow we popped the last state
+		return state;
+	}
+	
+	protected void initStateStack() {
+		this.stateStack = new ArchonState[10];
+		this.stateStackTop = 0;
+		this.pushState(ArchonState.LOITERING);
+	}
 	
 }
