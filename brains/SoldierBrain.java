@@ -98,6 +98,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 					
 					try {
 						r.getRc().attackSquare(enemy.location, l);
+						break;
 					} catch (GameActionException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -124,6 +125,9 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			if(this.r.getRc().getLocation().distanceSquaredTo(nearestFriendlyArchon)==2) {
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.ROBOT_TYPE, RobotType.ARCHON), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));				
 			} else {
+				
+				System.out.println("in low flux mode, moving to " + nearestFriendlyArchon);
+
 				this.r.getNav().setTarget(nearestFriendlyArchon, true);
 			}
 			break;
@@ -148,7 +152,6 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 	@Override
 	public void handleMessage(MessageWrapper msg) {
-		System.out.println("Got message! " + msg);
 		if(msg.msg.getType()==MoveOrderMessage.type) {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.
@@ -161,7 +164,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			}
 		} else if (msg.msg.getType()==LowFluxMessage.type) {
 			
-		}
+		} 
 	}
 
 }

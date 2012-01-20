@@ -169,10 +169,7 @@ public class RadioController {
 	protected boolean validMessage(Message msg) {
 		// these tests ensure that the number of fields is right
 		// to make this a probable message from our team. 
-		System.out.println("ints: " + msg.ints);
-		System.out.println("strings: " + msg.strings);
-		System.out.println("locations: " + msg.locations);
-		
+
 		if(msg.ints==null) return false;
 		if(msg.strings==null) return false;
 		if(msg.locations != null) return false;
