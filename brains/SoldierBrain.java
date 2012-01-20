@@ -21,6 +21,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		HOLD,
 		MOVE,
 		ATTACK,
+		SEEK_TARGET,
 		LOST,
 		LOW_FLUX,
 		OUT_OF_FLUX,
@@ -56,13 +57,18 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			this.state = SoldierState.LOW_FLUX;
 		} else if(r.getCache().numEnemyRobotsInRange > 0) {
 			this.state = SoldierState.ATTACK;
-		} 
+		} else if(r.getCache().numRemoteRobots > 0) {
+			
+			// we only get here if we don't see any robots ourselves, but 
+			// OTHER people see robots to attack. But we prefer to transition
+			// into ATTACK if we can.
+			
+			this.state = SoldierState.SEEK_TARGET;
+		}
 
 
 		System.out.println("state: " + this.state);
 
-	
-		
 		switch(this.state) {
 		case HOLD:
 			// do nothing! we're waiting for someone to tell us where to go.
@@ -79,6 +85,41 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			NavController nav = this.r.getNav();
 			if(nav.isAtTarget()) this.state = SoldierState.HOLD;
 			nav.doMove();
+			break;
+		case SEEK_TARGET:
+			
+			if(r.getRc().isMovementActive()) break;
+			
+			// we don't see anyone bad, but others near us do. 
+			// so, turn towards the nearest target.
+			
+			// maybe eventually we should use the centroid code that
+			// archons use for spreading to aim at the center of detected mass?
+			int d2 = 100000;
+			SRobotInfo target = null;
+			for(SRobotInfo enemy : r.getCache().getRemoteRobots()) {
+				if(enemy==null) break;
+				int distanceToRobot = enemy.location.distanceSquaredTo(r.getRc().getLocation());
+				
+				if(distanceToRobot < d2) {
+					d2 = distanceToRobot;
+					target = enemy;
+				}
+			}
+			
+			if(target==null) break; // this shouldn't happen - we won't be in this
+									// state if there are no enemies
+			
+			// now point ourselves at that enemy.
+			try {
+				r.getRc().setDirection(r.getRc().getLocation().directionTo(target.location));
+			} catch (GameActionException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			// the way we transition out of this is we see something to attack on
+			// our OWN scanners.
 			break;
 		case ATTACK:
 			
@@ -172,10 +213,9 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 			if(!rlm.friendly) {
 				for(SRobotInfo r : rlm.robots) {
-					this.r.getCache().addRobot(r.toRobotInfo());
+					this.r.getCache().addRemoteRobot(r);
 				}
 			}
 		}
 	}
-
 }

@@ -20,5 +20,5 @@ public class SRobot implements Serializable {
 		this.team = r.getTeam();
 		this.level = r.getRobotLevel();
 		this.id = r.getID();
-	}
+	}	
 }

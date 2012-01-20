@@ -1,5 +1,6 @@
 package team035.modules;
 
+import team035.messages.SRobotInfo;
 import team035.robots.BaseRobot;
 import battlecode.common.Direction;
 import battlecode.common.MapLocation;
@@ -28,9 +29,12 @@ public class StateCache {
 	protected RobotInfo[] robots;
 	protected RobotInfo[] friendlyRobots;
 	protected RobotInfo[] enemyRobots;
+	protected SRobotInfo[] remoteRobots;
+	
 	public int numRobotsInRange;
 	public int numFriendlyRobotsInRange;
 	public int numEnemyRobotsInRange;
+	public int numRemoteRobots;
 
 	protected MapLocation nearestFriendlyArchon;
 	protected MapLocation[] friendlyArchonLocs;
@@ -45,13 +49,25 @@ public class StateCache {
 		numRobotsInRange = 0;
 		numFriendlyRobotsInRange = 0;
 		numEnemyRobotsInRange = 0;
+		numRemoteRobots = 0;
 
 		friendlyRobots = new RobotInfo[MAX_ROBOTS];
 		enemyRobots = new RobotInfo[MAX_ROBOTS];
+		remoteRobots = new SRobotInfo[MAX_ROBOTS];
 
 		friendlyArchonLocs = null;
 	}
 
+	public void addRemoteRobot(SRobotInfo robotInfo) {
+		this.remoteRobots[numRemoteRobots] = robotInfo;
+		numRemoteRobots++;
+	}
+	
+	public SRobotInfo[] getRemoteRobots() {
+		return this.remoteRobots;
+	}
+
+	
 	public void addRobot(RobotInfo r) {
 		this.robots[numRobotsInRange] = r;
 
@@ -86,7 +102,6 @@ public class StateCache {
 		System.arraycopy(this.enemyRobots, 0, out, 0, numEnemyRobotsInRange);
 
 		return out;
-
 	}
 
 	// ------------ SIMPLE CACHING METHODS ---------------- //
@@ -129,5 +144,6 @@ public class StateCache {
 	public MapLocation[] senseCapturablePowerNodes() {
 		return this.r.getRc().senseCapturablePowerNodes();
 	}
+
 
 }
