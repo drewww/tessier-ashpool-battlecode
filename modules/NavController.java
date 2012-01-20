@@ -172,13 +172,15 @@ public class NavController {
 		MapLocation robotLoc = rc.getLocation();
 		// check to see if the intended target is blocked. if so, try to choose a different
 		// blocking target
-		if(robotLoc.distanceSquaredTo(this.target)+2 <= rc.getType().sensorRadiusSquared) {
+		if(robotLoc.distanceSquaredTo(this.target) <= rc.getType().sensorRadiusSquared) {
 			if(!isClearLoc(this.target)) {
 				for(Direction testDir : compass) {
 					MapLocation testLoc = this.dockingTarget.add(testDir);
-					if(isClearLoc(testLoc)) {
-						this.target = testLoc;
-						break;
+					if(robotLoc.distanceSquaredTo(testLoc) <= rc.getType().sensorRadiusSquared) {
+						if(isClearLoc(testLoc)) {
+							this.target = testLoc;
+							break;
+						}
 					}
 				}
 			}

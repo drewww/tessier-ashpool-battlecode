@@ -29,9 +29,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 
-
 	protected enum ArchonState {
-		LOITERING, MOVING, BUILDING, SPREADING
+		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING
 	}
 
 	protected ArchonState state;
@@ -59,22 +58,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	public void think() {
 		this.updateCooldowns();
 		
-		if(fluxTransferQueued) {
-			
-			GameObject go;
-			try {
-				go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
-				if(go!=null) {
-					this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
-				}
-			} catch (GameActionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			fluxTransferQueued = false;
-		} 
-		
+
 		switch(this.getState()) {
 		case LOITERING:
 			loiter();
@@ -88,8 +72,26 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		case SPREADING:
 			spread();
 			break;
+		case REFUELING:
+			refuel();
+			break;
 		}
 	}
+	
+	protected void refuel() {
+		GameObject go;
+		try {
+			go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
+			if(go!=null) {
+				this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
+			}
+		} catch (GameActionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		this.popState();
+	}
+	
 	
 	protected void loiter() {
     if(this.isNearArchons() && spreadingCooldown == 0) {
@@ -140,34 +142,38 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		    System.out.println("I'm at " + myLoc);
 		    Direction towardsCentroid = myLoc.directionTo(centroid);
 		    Direction awayFromCentroid = towardsCentroid.opposite();
-		    try {
-			    if(rc.getDirection() != awayFromCentroid &&
-			    	 rc.getDirection() != towardsCentroid) {
-			    	rc.setDirection(awayFromCentroid);
-			    	return;
-			    }
-			    
-			    // if we're facing a good direction do move!
-			    if(rc.getDirection() == awayFromCentroid) {
-			    	if(rc.canMove(awayFromCentroid)) {
-			    		rc.moveForward();
-			    		return;
-			    	} else {
-			    		spreadBlocked = true;
-			    	}
-			    } 
-			    
-			    if(rc.getDirection() == towardsCentroid) {
-			    	if(rc.canMove(towardsCentroid)) {
-				    	rc.moveBackward();
-				    	return;
-			    	} else {
-			    		spreadBlocked = true;
-			    	}
-			    }
-		    } catch (GameActionException e) {
-		    	e.printStackTrace();
+		    if(towardsCentroid == Direction.OMNI || towardsCentroid == Direction.NONE) {
 		    	spreadBlocked = true;
+		    } else {
+			    try {
+				    if(rc.getDirection() != awayFromCentroid &&
+				    	 rc.getDirection() != towardsCentroid) {
+				    	rc.setDirection(awayFromCentroid);
+				    	return;
+				    }
+				    
+				    // if we're facing a good direction do move!
+				    if(rc.getDirection() == awayFromCentroid) {
+				    	if(rc.canMove(awayFromCentroid)) {
+				    		rc.moveForward();
+				    		return;
+				    	} else {
+				    		spreadBlocked = true;
+				    	}
+				    } 
+				    
+				    if(rc.getDirection() == towardsCentroid) {
+				    	if(rc.canMove(awayFromCentroid)) {
+					    	rc.moveBackward();
+					    	return;
+				    	} else {
+				    		spreadBlocked = true;
+				    	}
+				    }
+			    } catch (GameActionException e) {
+			    	e.printStackTrace();
+			    	spreadBlocked = true;
+			    }
 		    }
 	    }
 
@@ -290,8 +296,10 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			LowFluxMessage lowFluxMessage = (LowFluxMessage) msg.msg;
 			
 			if(this.r.getRc().getLocation().distanceSquaredTo(lowFluxMessage.loc)<=2) {
+				
+				
 				// do a transfer.
-				if(!this.fluxTransferQueued) {
+				if(this.getState() != ArchonState.REFUELING) {
 					double amountToTransfer = INITIAL_ROBOT_FLUX*0.75;
 					
 					if(amountToTransfer > this.r.getRc().getFlux()) {
@@ -299,6 +307,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 					}
 					
 					this.queueFluxTransfer(lowFluxMessage.loc, lowFluxMessage.level, amountToTransfer);
+					System.out.println("Archon refueling!");
+					this.pushState(ArchonState.REFUELING);
 				}
 			}
 		}
