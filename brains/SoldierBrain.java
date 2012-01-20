@@ -9,6 +9,7 @@ import team035.messages.SRobotInfo;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.robots.BaseRobot;
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
@@ -110,9 +111,12 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			if(target==null) break; // this shouldn't happen - we won't be in this
 									// state if there are no enemies
 			
-			// now point ourselves at that enemy.
+ 
 			try {
-				r.getRc().setDirection(r.getRc().getLocation().directionTo(target.location));
+				// now point ourselves at that enemy / move towards them.
+				Direction targetDirection =r.getRc().getLocation().directionTo(target.location); 
+				if(r.getRc().getDirection().equals(targetDirection)) r.getRc().moveForward();
+				else r.getRc().setDirection(targetDirection);
 			} catch (GameActionException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
