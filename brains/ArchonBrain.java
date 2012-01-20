@@ -246,7 +246,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.fluxTransferLoc = loc;
 		this.fluxTransferLevel = level;
 		this.fluxTransferAmount = amount;
-		this.fluxTransferQueued = true;
+
+		// push refueling onto the stack
+		this.pushState(ArchonState.REFUELING);
 	}
 	
 	protected boolean spawnRobotIfPossible() {
