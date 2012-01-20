@@ -12,12 +12,20 @@ public class RadarController {
 	
 	protected StateCache cache;
 	
+	protected boolean enabled = true;
+	
 	public RadarController (BaseRobot r) {
 		this.r = r;
 		this.rc = this.r.getRc();
 	}
 	
+	public void setEnabled(boolean enabled) {
+		this.enabled = enabled;
+	}
+	
 	public void scan() {
+		if(!enabled) return;
+		
 		this.cache = r.getCache();
 		
 		// looks around the robot and updates the state cache
@@ -26,7 +34,6 @@ public class RadarController {
 		
 			try {
 				RobotInfo info = this.rc.senseRobotInfo(robot);
-				
 				this.cache.addRobot(info);
 			} catch (GameActionException e) {
 				// TODO Auto-generated catch block
