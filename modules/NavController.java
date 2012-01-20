@@ -190,6 +190,7 @@ public class NavController {
 					MapLocation testLoc = this.dockingTarget.add(testDir);
 					if(isClearLoc(testLoc)) {
 						this.target = testLoc;
+						break;
 					}
 				}
 			}
