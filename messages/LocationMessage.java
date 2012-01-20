@@ -8,10 +8,10 @@ public class LocationMessage extends BaseMessage {
 
 	public static final String type = "LOC";
 	public MapLocation loc;
-	public SerializableRobot robot;
+	public SRobot robot;
 	
 	public LocationMessage(Robot robot, MapLocation location) {
-		this.robot = new SerializableRobot(robot);
+		this.robot = new SRobot(robot);
 		this.loc = location;
 	}
 

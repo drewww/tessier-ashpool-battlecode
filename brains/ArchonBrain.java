@@ -48,6 +48,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		
 		r.getRadio().addListener(this, ClaimNodeMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
+		
+		r.getRadar().setEnemyTargetBroadcast(true);
 		this.initCooldowns();
 		this.initStateStack();
 	}

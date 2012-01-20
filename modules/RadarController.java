@@ -1,5 +1,7 @@
 package team035.modules;
 
+import team035.messages.MessageAddress;
+import team035.messages.RobotInfosMessage;
 import team035.robots.BaseRobot;
 import battlecode.common.GameActionException;
 import battlecode.common.Robot;
@@ -13,6 +15,7 @@ public class RadarController {
 	protected StateCache cache;
 	
 	protected boolean enabled = true;
+	protected boolean enemyTargetBroadcast = false;
 	
 	public RadarController (BaseRobot r) {
 		this.r = r;
@@ -23,6 +26,10 @@ public class RadarController {
 		this.enabled = enabled;
 	}
 	
+	public void setEnemyTargetBroadcast(boolean enemyTargetBroadcast) {
+		this.enemyTargetBroadcast = enemyTargetBroadcast;
+	}
+
 	public void scan() {
 		if(!enabled) return;
 		
@@ -39,6 +46,11 @@ public class RadarController {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		}
+		
+		if(this.enemyTargetBroadcast && this.cache.numEnemyRobotsInRange > 0) {
+			RobotInfosMessage msg = new RobotInfosMessage(this.cache.getEnemyRobots());
+			this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), msg);
 		}
 	}
 }

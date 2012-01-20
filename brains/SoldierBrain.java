@@ -4,6 +4,8 @@ import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
+import team035.messages.RobotInfosMessage;
+import team035.messages.SRobotInfo;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.robots.BaseRobot;
@@ -40,6 +42,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
+		r.getRadio().addListener(this, RobotInfosMessage.type);
 	}
 
 	@Override
@@ -164,7 +167,15 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			}
 		} else if (msg.msg.getType()==LowFluxMessage.type) {
 			
-		} 
+		} else if (msg.msg.getType()==RobotInfosMessage.type) {
+			RobotInfosMessage rlm = (RobotInfosMessage) msg.msg;
+
+			if(!rlm.friendly) {
+				for(SRobotInfo r : rlm.robots) {
+					this.r.getCache().addRobot(r.toRobotInfo());
+				}
+			}
+		}
 	}
 
 }

@@ -10,12 +10,12 @@ public class LowFluxMessage extends BaseMessage {
 
 	public static final String type = "LOW_FLUX";
 	
-	public SerializableRobot from;
+	public SRobot from;
 	public MapLocation loc;
 	public RobotLevel level;
 	
 	public LowFluxMessage(Robot robot, MapLocation loc, RobotLevel level) {
-		this.from = new SerializableRobot(robot);
+		this.from = new SRobot(robot);
 		this.loc = loc;
 		this.level = level;
 	}
