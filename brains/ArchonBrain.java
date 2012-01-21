@@ -20,6 +20,7 @@ import battlecode.common.GameObject;
 import battlecode.common.MapLocation;
 import battlecode.common.PowerNode;
 import battlecode.common.RobotController;
+import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 
@@ -30,7 +31,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int stateStackTop;
 
 	protected enum ArchonState {
-		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING
+		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING
 	}
 
 	protected ArchonState state;
@@ -59,6 +60,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	@Override
 	public void think() {
 		this.updateCooldowns();
+		this.scanForEnemies();
 		
 
 		switch(this.getState()) {
@@ -77,9 +79,65 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		case REFUELING:
 			refuel();
 			break;
+		case EVADING:
+			evade();
+			break;
 		}
 	}
 	
+	private void evade() {
+		if(spawnRobotIfPossible()) {
+			return;
+		}
+		
+		RobotController rc = this.r.getRc();
+		RobotInfo[] enemies = r.getCache().getEnemyRobots();
+		MapLocation centroid = new MapLocation(0,0);
+    for(RobotInfo enemy: enemies) {
+    	MapLocation enemyLoc = enemy.location; 
+    	centroid = centroid.add(enemyLoc.x, enemyLoc.y);
+    }
+    centroid = new MapLocation(centroid.x / enemies.length, centroid.y / enemies.length);
+    if(!rc.isMovementActive()) {
+    	try {
+	    	Direction enemyHeading = rc.getLocation().directionTo(centroid);
+	    	if(enemyHeading != Direction.NONE && enemyHeading != Direction.OMNI) {
+	    		if(rc.getDirection() != enemyHeading) {
+	    			rc.setDirection(enemyHeading);
+	    			return;
+	    		}
+	    		if(rc.canMove(enemyHeading.opposite())) {
+	    			rc.moveBackward();
+	    			return;
+	    		}
+	    		
+	    	}
+    	} catch (GameActionException e) {
+    		e.printStackTrace();    		
+    	}
+    }
+	}
+
+
+
+	protected void scanForEnemies() {
+		if(r.getCache().numEnemyAttackRobotsInRange > 0) {
+			System.out.println("Enemy detected. Evading!");
+			if(this.getState() != ArchonState.EVADING &&
+				this.getState() != ArchonState.REFUELING) {
+				this.pushState(ArchonState.EVADING);
+			}
+		}
+		else {
+			if(this.getState() == ArchonState.EVADING) {
+				System.out.println("Enemy gone. Stopping evasion.");
+				this.popState();
+			}
+		}
+	}
+
+
+
 	protected void refuel() {
 		GameObject go;
 		try {
@@ -235,7 +293,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	protected void move() {
 		
-		this.spawnRobotIfPossible();
+		if(this.spawnRobotIfPossible()) {
+			return;
+		}
 		
 		NavController nav = this.r.getNav();
 		nav.doMove();

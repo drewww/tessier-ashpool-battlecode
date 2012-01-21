@@ -6,6 +6,7 @@ import battlecode.common.Direction;
 import battlecode.common.MapLocation;
 import battlecode.common.PowerNode;
 import battlecode.common.RobotInfo;
+import battlecode.common.RobotType;
 
 public class StateCache {
 	public static final int MAX_ROBOTS = 64;
@@ -34,6 +35,7 @@ public class StateCache {
 	public int numRobotsInRange;
 	public int numFriendlyRobotsInRange;
 	public int numEnemyRobotsInRange;
+	public int numEnemyAttackRobotsInRange;
 	public int numRemoteRobots;
 
 	protected MapLocation nearestFriendlyArchon;
@@ -49,6 +51,7 @@ public class StateCache {
 		numRobotsInRange = 0;
 		numFriendlyRobotsInRange = 0;
 		numEnemyRobotsInRange = 0;
+		numEnemyAttackRobotsInRange = 0;
 		numRemoteRobots = 0;
 
 		friendlyRobots = new RobotInfo[MAX_ROBOTS];
@@ -80,6 +83,10 @@ public class StateCache {
 		} else {
 			this.enemyRobots[numEnemyRobotsInRange] = r;
 			numEnemyRobotsInRange++;
+			if(r.type != RobotType.TOWER &&
+				 r.type != RobotType.ARCHON) {
+				numEnemyAttackRobotsInRange++;
+			}
 		}
 	}
 
