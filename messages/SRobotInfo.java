@@ -9,6 +9,10 @@ import battlecode.common.RobotType;
 import battlecode.common.Team;
 
 public class SRobotInfo implements Serializable {
+	/**
+	 * foo
+	 */
+	private static final long serialVersionUID = 1L;
 	public Direction direction;
 	public double energon;
 	public double flux;

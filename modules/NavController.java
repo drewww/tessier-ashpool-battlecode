@@ -31,6 +31,7 @@ public class NavController {
 		this.r = r;
 		this.mode = Mode.PATHING;
 		this.bugDirection = Direction.NONE;
+		this.target = r.getRc().getLocation();
 	}
 
 	protected void resetDocking() {

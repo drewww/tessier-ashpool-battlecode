@@ -51,10 +51,9 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	public void think() {
 		// do some global environmental state checks in order of precedence.
 		if(this.r.getRc().getFlux() < OUT_OF_FLUX) {
-			this.state = SoldierState.OUT_OF_FLUX;
 			
 			// turn the radio off, shutdown the radar
-		} else if(this.r.getRc().getFlux() < LOW_FLUX_THRESHOLD) {
+		} else if(this.r.getRc().getFlux() < SoldierBrain.LOW_FLUX_THRESHOLD) {
 			this.state = SoldierState.LOW_FLUX;
 		} else if(r.getCache().numEnemyRobotsInRange > 0) {
 			this.state = SoldierState.ATTACK;
@@ -115,7 +114,11 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			try {
 				// now point ourselves at that enemy / move towards them.
 				Direction targetDirection =r.getRc().getLocation().directionTo(target.location); 
-				if(r.getRc().getDirection().equals(targetDirection)) r.getRc().moveForward();
+				if(r.getRc().getDirection().equals(targetDirection)) {
+					if(r.getRc().canMove(targetDirection)) {
+						r.getRc().moveForward();
+					}
+				}
 				else r.getRc().setDirection(targetDirection);
 			} catch (GameActionException e1) {
 				// TODO Auto-generated catch block
@@ -163,7 +166,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		case LOW_FLUX:
 			// if we're in low flux mode, we want to path to our nearest archon
 			// and then ask it for flux.
-			if(this.r.getRc().getFlux() > this.LOW_FLUX_THRESHOLD) {
+			if(this.r.getRc().getFlux() > SoldierBrain.LOW_FLUX_THRESHOLD) {
 				this.state = SoldierState.HOLD;
 				break;
 			}

@@ -85,7 +85,10 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		try {
 			go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
 			if(go!=null) {
+				System.out.println("Refueled a robot!");
 				this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
+			} else {
+				System.out.println("Refuel failed!");
 			}
 		} catch (GameActionException e) {
 			// TODO Auto-generated catch block
@@ -200,7 +203,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		try {
 			if(nav.isAtTarget()) {
 				
-				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.BROADCAST), new ClaimNodeMessage());
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.BROADCAST), new ClaimNodeMessage(this.nodeBuildLocation));
 				
 				Direction nodeDirection = rc.getLocation().directionTo(nodeBuildLocation);
 				if(rc.getDirection() != nodeDirection) {
@@ -250,6 +253,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.fluxTransferAmount = amount;
 
 		// push refueling onto the stack
+		System.out.println("Queuing refuel");
 		this.pushState(ArchonState.REFUELING);
 	}
 	
@@ -261,6 +265,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 				try {
 					r.getRc().spawn(RobotType.SOLDIER);
 					this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, 0.9*INITIAL_ROBOT_FLUX);;
+					System.out.println("Spawned a robot.");
 					return true;
 				} catch (GameActionException e) {
 					// TODO Auto-generated catch block
@@ -292,8 +297,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	@Override
 	public void handleMessage(MessageWrapper msg) {
 		if(msg.msg.getType()==ClaimNodeMessage.type) {
-			this.popState();
-			this.pushState(ArchonState.LOITERING);
+			ClaimNodeMessage claimMessage = (ClaimNodeMessage) msg.msg;
+			MapLocation claimLocation = claimMessage.loc;
+			if(this.getState() == ArchonState.MOVING &&
+					claimLocation.equals(this.nodeBuildLocation)) {
+				this.popState();
+				this.pushState(ArchonState.LOITERING);			
+			}
 		}
 		
 		if(msg.msg.getType()==LowFluxMessage.type) {
@@ -401,6 +411,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			this.stateStack = newStack;
 		}
 		this.stateStack[this.stateStackTop] = state;
+		System.out.println("Pushed state. New top is: "  + this.stateStackTop);
 	}
 
 	protected ArchonState popState() {
@@ -408,6 +419,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(this.stateStackTop >= 0) {
 			this.stateStackTop--;	
 		}
+		System.out.println("Popped state. New top is: " + this.stateStackTop);
 		// Push the default loitering state if somehow we popped the last state
 		return state;
 	}
