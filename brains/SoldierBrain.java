@@ -68,6 +68,8 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 
 		System.out.println("state: " + this.state);
+		
+		this.displayState();
 
 		switch(this.state) {
 		case HOLD:
@@ -116,6 +118,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				Direction targetDirection =r.getRc().getLocation().directionTo(target.location); 
 				if(r.getRc().getDirection().equals(targetDirection)) {
 					if(r.getRc().canMove(targetDirection)) {
+						System.out.println("Soldier heading for target!");
 						r.getRc().moveForward();
 					}
 				}
@@ -201,6 +204,35 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		}
 	}
 
+	protected void displayState() {
+		String stateString = "NONE";
+		switch(this.state) {
+		case ATTACK:
+			stateString = "ATTACK";
+			break;
+		case HOLD:
+			stateString = "HOLD";
+			break;
+		case LOST:
+			stateString = "LOST";
+			break;
+		case LOW_FLUX:
+			stateString = "LOW_FLUX";
+			break;
+		case MOVE:
+			stateString = "MOVE";
+			break;
+		case OUT_OF_FLUX:
+			stateString = "OUT_OF_FLUX";
+			break;
+		case SEEK_TARGET:
+			stateString = "SEEK_TARGET";
+			break;
+		}
+		this.r.getRc().setIndicatorString(0, stateString);
+	}
+	
+	
 	@Override
 	public void handleMessage(MessageWrapper msg) {
 		if(msg.msg.getType()==MoveOrderMessage.type) {

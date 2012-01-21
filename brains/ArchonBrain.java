@@ -62,7 +62,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.updateCooldowns();
 		this.scanForEnemies();
 		
-
+		this.displayState();
 		switch(this.getState()) {
 		case LOITERING:
 			loiter();
@@ -85,7 +85,35 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		}
 	}
 	
-	private void evade() {
+	protected void displayState() {
+		String stateString = "NONE";
+		switch(this.getState()) {
+		case BUILDING:
+			stateString = "BUILDING";
+			break;
+		case EVADING:
+			stateString = "EVADING";
+			break;
+		case FLEEING:
+			stateString = "FLEEING";
+			break;
+		case LOITERING:
+			stateString = "LOITERING";
+			break;
+		case MOVING:
+			stateString = "MOVING";
+			break;
+		case REFUELING:
+			stateString = "REFUELING";
+			break;
+		case SPREADING:
+			stateString = "SPREADING";
+			break;
+		}
+		this.r.getRc().setIndicatorString(0, stateString);
+	}
+	
+	protected void evade() {
 		if(spawnRobotIfPossible()) {
 			return;
 		}
