@@ -55,7 +55,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// turn the radio off, shutdown the radar
 		} else if(this.r.getRc().getFlux() < SoldierBrain.LOW_FLUX_THRESHOLD) {
 			this.state = SoldierState.LOW_FLUX;
-		} else if(r.getCache().numEnemyRobotsInRange > 0) {
+		} else if(r.getCache().numEnemyRobotsInAttackRange > 0) {
 			this.state = SoldierState.ATTACK;
 		} else if(r.getCache().numRemoteRobots > 0) {
 			
@@ -120,6 +120,9 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 					if(r.getRc().canMove(targetDirection)) {
 						System.out.println("Soldier heading for target!");
 						r.getRc().moveForward();
+					} else {
+						// we're blocked, so switch back to move mode
+						this.state = SoldierState.MOVE;
 					}
 				}
 				else r.getRc().setDirection(targetDirection);
@@ -133,7 +136,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			break;
 		case ATTACK:
 			
-			if(r.getCache().numEnemyRobotsInRange==0) {
+			if(r.getCache().numEnemyRobotsInAttackRange==0) {
 				this.state = SoldierState.MOVE;
 			}
 			

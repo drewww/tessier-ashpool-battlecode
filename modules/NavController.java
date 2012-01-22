@@ -10,7 +10,7 @@ import battlecode.common.TerrainTile;
 
 public class NavController {
 	protected enum Mode {
-		PATHING, BUGGING, DOCKING, SPREADING
+		PATHING, BUGGING, DOCKING
 	}
 
 	protected BaseRobot r;
@@ -20,11 +20,18 @@ public class NavController {
 	protected Mode preBuggingMode;
 	protected Direction bugDirection;
 	private int epsilon;
-	
+	protected MapLocation buggingStartLoc;
+	protected static boolean[][][] BLOCK_DIRS;
+	protected int[] prohibitedDirs;
+	int withinEpsilon = 0;
+	private Direction startDesiredDir;
+	private boolean hugLeft;
+	private boolean goneAround;
+
 	protected static final Direction[] compass = {
-			Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
-			Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
-			Direction.WEST, Direction.NORTH_WEST
+		Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
+		Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
+		Direction.WEST, Direction.NORTH_WEST
 	};
 
 	public NavController(BaseRobot r) {
@@ -32,32 +39,71 @@ public class NavController {
 		this.mode = Mode.PATHING;
 		this.bugDirection = Direction.NONE;
 		this.target = r.getRc().getLocation();
+		this.buggingStartLoc = null;
+		this.initBlockDirs();
+		this.prohibitedDirs = new int[3];
+		reset();
+	}
+
+	protected void initBlockDirs () {
+		Direction[] directions = Direction.values();
+		BLOCK_DIRS = new boolean[directions.length][directions.length][directions.length];
+		for(int i = 0; i < directions.length; i++) {
+			for(int j = 0; i < directions.length; i++) {
+				for(int k = 0; i < directions.length; i++) {
+					BLOCK_DIRS[i][j][k] = true;
+				}
+			}
+		}
+
+		for (Direction d: Direction.values()) {
+			if (d == Direction.NONE || d == Direction.OMNI)
+				continue;
+			for (Direction b: Direction.values()) {
+				// if d is diagonal, allow all directions
+				if (!d.isDiagonal()) {
+					// Blocking a dir that is the first prohibited dir, or one
+					// rotation to the side
+					BLOCK_DIRS[d.ordinal()][b.ordinal()][d.ordinal()] = true;
+					BLOCK_DIRS[d.ordinal()][b.ordinal()][d.rotateLeft().ordinal()] = true;
+					BLOCK_DIRS[d.ordinal()][b.ordinal()][d.rotateRight().ordinal()] = true;
+					// b is diagonal, ignore it
+					if (!b.isDiagonal() && b != Direction.NONE && b != Direction.OMNI) {
+						// Blocking a dir that is the second prohibited dir, or one
+						// rotation to the side
+						BLOCK_DIRS[d.ordinal()][b.ordinal()][b.ordinal()] = true;
+						BLOCK_DIRS[d.ordinal()][b.ordinal()][b.rotateLeft().ordinal()] = true;
+						BLOCK_DIRS[d.ordinal()][b.ordinal()][b.rotateRight().ordinal()] = true;
+					}
+				}
+			}
+		}
 	}
 
 	protected void resetDocking() {
 		this.target = this.dockingTarget.add(Direction.SOUTH);
 	}
-	
+
 	public void setTarget(MapLocation loc) {
 		this.setTarget(loc, 0);
 	}
-	
+
 	public void setTarget(MapLocation loc, int epsilon) {
 		this.target = loc;
 		this.epsilon = epsilon;
 	}
-	
+
 	public void setTarget(MapLocation loc, boolean isDocking) {
-			if(true == isDocking) {
-				this.mode = Mode.DOCKING;
-				this.dockingTarget = loc;
-				this.resetDocking();
-			} else {
-				this.mode = Mode.PATHING;
-				this.setTarget(loc, 0);
-			}
+		if(true == isDocking) {
+			this.mode = Mode.DOCKING;
+			this.dockingTarget = loc;
+			this.resetDocking();
+		} else {
+			this.mode = Mode.PATHING;
+			this.setTarget(loc, 0);
+		}
 	}
-	
+
 	public MapLocation getTarget() {
 		return this.target;
 	}
@@ -74,37 +120,39 @@ public class NavController {
 		}
 		boolean moved = false;
 		RobotController rc = this.r.getRc();
-
 		if(!rc.isMovementActive()) {
-			switch(this.mode) {
-			case PATHING:
-				moved = this.doPathingMove();
-				break;
-			case DOCKING:
-				moved = this.doDockingMove();
-				break;
-			case BUGGING:
-				moved = this.doBuggingMove();
-				break;
+			Direction desiredDir = getNextMove();
+			if (desiredDir != Direction.NONE && desiredDir != Direction.OMNI) {
+				try {
+
+					// Set the direction or move
+					if (rc.getDirection() != desiredDir) {
+						rc.setDirection(desiredDir);
+						return moved;
+					} else if (rc.canMove(desiredDir)){
+						rc.moveForward();
+						return moved;
+					}
+				} catch(GameActionException e) {
+					moved = false;
+				}
 			}
 		}
-
-
 		return moved;
 	}
 
-	int withinEpsilon = 0;
+
 	public boolean isAtTarget() {
-		
-		int distance =target.distanceSquaredTo(this.r.getRc().getLocation());
-		
+
+		int distance = target.distanceSquaredTo(this.r.getRc().getLocation());
+
 		if(distance==0) {
 			withinEpsilon = 0;
 			return true;
 		}
 		if(distance <= this.epsilon*this.epsilon) {
 			withinEpsilon++;
-			
+
 			if(withinEpsilon > 3) {
 				withinEpsilon = 0;
 				return true;
@@ -112,83 +160,34 @@ public class NavController {
 		} else {
 			withinEpsilon = 0;
 		}
-		
+
 		return false;
 	}
 
-	protected boolean doPathingMove() {
-		RobotController rc = this.r.getRc();
-		StateCache cache = this.r.getCache();
-		Direction moveHeading = getDesiredHeading();
-		try {
-			if(rc.getDirection() != moveHeading) {
-				rc.setDirection(moveHeading);
-				return true;
-			}
-			else {
-				if(canMoveForward()) {
-					rc.moveForward();
-					return true;
-				} else {
-					// enter bugging mode
-					this.preBuggingMode = this.mode;
-					this.mode = Mode.BUGGING;
-					return this.setInitialBuggingDirection();
-				}
-
-			}
-		} catch (GameActionException gae) {
-			gae.printStackTrace();
-		}
-		return false;
-
-	}
-	
-	protected boolean canMoveForward() {
-		boolean canMove = false;
+	protected boolean isValidMove(Direction dir) {
 		switch (r.getRc().getType()) {
 		case SOLDIER:
 			MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
-			MapLocation frontLoc = r.getRc().getLocation().add(r.getRc().getDirection());
+			MapLocation frontLoc = r.getRc().getLocation().add(dir);
 			for (MapLocation loc :nodeLocs) {
-				if(frontLoc.equals(loc.add(Direction.SOUTH))) {
+				if(frontLoc.equals(loc) || frontLoc.equals(loc.add(Direction.SOUTH))) {
 					return false;
 				}
 			}
-			if(!r.getCache().canMove(r.getRc().getDirection())) {
+			if(!r.getCache().canMove(dir)) {
 				return false;
 			}
 			break;
 		case ARCHON:
-			if(!r.getCache().canMove(r.getRc().getDirection())) {
+			if(!r.getCache().canMove(dir)) {
 				return false;
 			}
 		}
 		return true;
 	}
-		
-	protected boolean doDockingMove() {
-		RobotController rc = this.r.getRc();
-		boolean success = this.doPathingMove();
-		MapLocation robotLoc = rc.getLocation();
-		// check to see if the intended target is blocked. if so, try to choose a different
-		// blocking target
-		if(robotLoc.distanceSquaredTo(this.target) <= rc.getType().sensorRadiusSquared) {
-			if(!isClearLoc(this.target)) {
-				for(Direction testDir : compass) {
-					MapLocation testLoc = this.dockingTarget.add(testDir);
-					if(robotLoc.distanceSquaredTo(testLoc) <= rc.getType().sensorRadiusSquared) {
-						if(isClearLoc(testLoc)) {
-							this.target = testLoc;
-							break;
-						}
-					}
-				}
-			}
-		}
-		return success;
-	}
-	
+
+
+
 	protected boolean isClearLoc(MapLocation loc) {
 		RobotController rc = this.r.getRc();
 		try {
@@ -202,70 +201,167 @@ public class NavController {
 		}
 		return false;
 	}
-	
-	protected boolean setInitialBuggingDirection() {
-		RobotController rc = this.r.getRc();
-		StateCache cache = this.r.getCache();
-		// we're entering this mode because forward motion is blocked. 
-		// scan every direction for the best unblocked move
-		MapLocation robotLoc = rc.getLocation();
-		Direction baseHeading = rc.getDirection();
-		Direction bestDirection = Direction.NONE;
-		double bestDistance = Double.MAX_VALUE;
-		for(Direction direction : Direction.values()) {
-			if(direction == Direction.NONE || direction == Direction.OMNI) {
-				continue;
+
+
+	public Direction getNextMove(){
+		RobotController rc = r.getRc();
+		MapLocation myLoc = rc.getLocation();
+		Direction desiredDir = myLoc.directionTo(target);
+		if (desiredDir == Direction.NONE || desiredDir == Direction.OMNI)
+			return desiredDir;
+		// If we are bugging around an object, see if we have gotten past it
+		if (mode == Mode.BUGGING){
+			// If we are closer to the target than when we started, and we can
+			// move in the ideal direction, then we are past the object
+			if (myLoc.distanceSquaredTo(target) < this.buggingStartLoc.distanceSquaredTo(target) && canMove(desiredDir)){
+				prohibitedDirs = new int[] {Direction.NONE.ordinal(), Direction.NONE.ordinal()};
+				this.goneAround = false;
+				mode = this.preBuggingMode;
 			}
-			MapLocation testLocation = robotLoc.add(direction);
-			double distance = testLocation.distanceSquaredTo(this.target);
-			if(distance < bestDistance) {
-				if(rc.canMove(direction)) {
-					bestDirection = direction;
-					bestDistance = distance;
+		}
+		// If we are docking, check to see whether our target is blocked, and if so
+		// pick an open target next to the docking location
+		if(mode == Mode.DOCKING) {
+			if(myLoc.distanceSquaredTo(this.target) <= rc.getType().sensorRadiusSquared) {
+				if(!isClearLoc(this.target)) {
+					for(Direction testDir : compass) {
+						MapLocation testLoc = this.dockingTarget.add(testDir);
+						if(myLoc.distanceSquaredTo(testLoc) <= rc.getType().sensorRadiusSquared) {
+							if(isClearLoc(testLoc)) {
+								this.target = testLoc;
+								break;
+							}
+						}
+					}
 				}
 			}
 		}
-		if(bestDirection == Direction.NONE) {
-			// stay put and hope things clear up.
+
+		
+		
+		switch(mode){
+		case PATHING:
+		case DOCKING:
+			Direction newDir = flockInDir(desiredDir);
+			if (newDir != null)
+				return newDir;
+
+			this.preBuggingMode = this.mode;
+			mode = Mode.BUGGING;
+			buggingStartLoc = myLoc;
+			startDesiredDir = desiredDir;
+			// intentional fallthrough
+		default:
+			if (goneAround && (desiredDir == startDesiredDir.rotateLeft().rotateLeft() ||
+			desiredDir == startDesiredDir.rotateRight().rotateRight())) {
+				prohibitedDirs[0] = Direction.NONE.ordinal();
+			}
+			if (desiredDir == startDesiredDir.opposite()) {
+				prohibitedDirs[0] = Direction.NONE.ordinal();
+				goneAround = true;
+			}
+			Direction moveDir = hug(desiredDir, false);
+			if (moveDir == null) {
+				moveDir = desiredDir;
+			}
+			return moveDir;
+		}
+	}
+
+	private Direction turn(Direction dir){
+		return (this.hugLeft ? dir.rotateRight() : dir.rotateLeft());
+	}
+
+
+	private Direction hug (Direction desiredDir, boolean recursed){
+		if (canMove(desiredDir)){
+			return desiredDir;
+		}
+		MapLocation myLoc = r.getRc().getLocation();
+		Direction myDir = r.getRc().getDirection();
+
+		Direction tryDir = turn(desiredDir);
+		MapLocation tryLoc = myLoc.add(tryDir);
+		//TODO check for movement off map
+		for (int i = 0; i < 8 && !canMove(tryDir) && !isOffMap(tryLoc); i++){
+			tryDir = turn(tryDir);
+			tryLoc = myLoc.add(tryDir);
+		}
+		// If the loop failed (found no directions or encountered the map edge)
+		//TODO check for movement off map
+		if (!canMove(tryDir) || isOffMap(tryLoc)) {
+			hugLeft = !hugLeft;
+			if (recursed){
+				// We've tried hugging in both directions...
+				if (prohibitedDirs[0] != Direction.NONE.ordinal() && prohibitedDirs[1] != Direction.NONE.ordinal()) {
+					// We were prohibiting certain directions before.
+					// try again allowing those directions
+					prohibitedDirs[1] = Direction.NONE.ordinal();
+					return hug(desiredDir, false);
+				} else {
+					// Complete failure. Reset the state and start over.
+					reset();
+					return null;
+				}
+			}
+			// mark ÒrecursedÓ as true and try hugging the other direction
+			return hug(desiredDir, true);
+		}
+		// If we're moving in a new cardinal direction, store it.
+		if (tryDir != myDir && !tryDir.isDiagonal()) {
+			if (turn(turn(Direction.values()[prohibitedDirs[0]])) == tryDir) {
+				prohibitedDirs[0] = tryDir.opposite().ordinal();
+				prohibitedDirs[1] = Direction.NONE.ordinal();
+			} else {
+				prohibitedDirs[1] = prohibitedDirs[0];
+				prohibitedDirs[0] = tryDir.opposite().ordinal();
+			}
+		}
+		return tryDir;
+	}
+
+
+	private boolean canMove(Direction dir) {
+		System.out.println("prohibitedDirs.length: " + prohibitedDirs.length);
+		System.out.println("BLOCK_DIRS[0].length: " + BLOCK_DIRS[0].length);
+		System.out.println("BLOCK_DIRS[1].length: " + BLOCK_DIRS[1].length);
+		System.out.println("BLOCK_DIRS[2].length: " + BLOCK_DIRS[2].length);
+
+		if (BLOCK_DIRS[prohibitedDirs[0]][prohibitedDirs[1]][dir.ordinal()]) {
 			return false;
 		}
-		try {
-			rc.setDirection(bestDirection);
-			this.bugDirection = bestDirection;
+
+		//if (r.getRc().canMove(dir)) {
+		if(isValidMove(dir)) {
 			return true;
-		} catch (GameActionException gae) {
-			gae.printStackTrace();
 		}
 		return false;
+	}
+
+	private Direction flockInDir(Direction desiredDir){
+		Direction[] directions = new Direction[3];
+		directions[0] = desiredDir;
+		Direction left = desiredDir.rotateLeft();
+		Direction right = desiredDir.rotateRight();
+		MapLocation myLoc = r.getRc().getLocation();
+		boolean leftIsBetter = (myLoc.add(left).distanceSquaredTo(target) < myLoc.add(right).distanceSquaredTo(target));
+		directions[1] = (leftIsBetter ? left : right);
+		directions[2] = (leftIsBetter ? right : left);
+		for (int i = 0; i < directions.length; i++){
+			if (canMove(directions[i])){
+				return directions[i];
+			}
+		}
+		return null;
+	}
+
+	protected void reset() {
+		for(int i = 0; i < 3; i++) {
+			this.prohibitedDirs[i] = Direction.NONE.ordinal();
+		}
 	}
 	
-	protected boolean doBuggingMove() {
-		RobotController rc = this.r.getRc();
-		StateCache cache = this.r.getCache();
-		Direction targetHeading = getDesiredHeading();
-		try {
-			if(cache.canMove(targetHeading)) {
-				rc.setDirection(targetHeading);
-				this.mode = this.preBuggingMode;
-				return true;
-			}
-			else {
-				if(canMoveForward()) {
-					rc.moveForward();
-					return true;
-				} else {
-					// At the moment I'm not checking whether this could put us
-					// in an infinite loop, which it could well in some pretty
-					// trivial cases.
-					return setInitialBuggingDirection();
-				}
-
-			}
-		} catch (GameActionException gae) {
-			gae.printStackTrace();
-		}
-		return false;
+	protected boolean isOffMap(MapLocation mapLoc) {
+		return r.getRc().senseTerrainTile(mapLoc) == TerrainTile.OFF_MAP;
 	}
-
-
 }

@@ -35,6 +35,7 @@ public class StateCache {
 	public int numRobotsInRange;
 	public int numFriendlyRobotsInRange;
 	public int numEnemyRobotsInRange;
+	public int numEnemyRobotsInAttackRange;
 	public int numEnemyAttackRobotsInRange;
 	public int numRemoteRobots;
 
@@ -51,6 +52,7 @@ public class StateCache {
 		numRobotsInRange = 0;
 		numFriendlyRobotsInRange = 0;
 		numEnemyRobotsInRange = 0;
+		numEnemyRobotsInAttackRange = 0;
 		numEnemyAttackRobotsInRange = 0;
 		numRemoteRobots = 0;
 
@@ -83,6 +85,10 @@ public class StateCache {
 		} else {
 			this.enemyRobots[numEnemyRobotsInRange] = r;
 			numEnemyRobotsInRange++;
+			if(r.location.distanceSquaredTo(this.r.getRc().getLocation()) <=
+				 this.r.getRc().getType().attackRadiusMaxSquared) {
+				numEnemyRobotsInAttackRange++;
+			}
 			if(r.type != RobotType.TOWER &&
 				 r.type != RobotType.ARCHON) {
 				numEnemyAttackRobotsInRange++;
