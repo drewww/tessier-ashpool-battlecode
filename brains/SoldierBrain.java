@@ -34,7 +34,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	protected final static double PLENTY_OF_FLUX_THRESHOLD = 20.0;
 	protected final static double LOW_FLUX_THRESHOLD = 10.0;
 	protected final static double OUT_OF_FLUX_THRESHOLD = 5.0;
-	protected final static double LOST_THRESHOLD = 20;
+	protected final static double LOST_THRESHOLD = 10;
 	
 	protected int turnsHolding = 0;
 	protected int turnsSinceLastOutOfFluxMessage = 0;
@@ -91,6 +91,8 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			NavController nav = this.r.getNav();
 			if(nav.isAtTarget()) {
 				System.out.println("Soldier reached target");
+				System.out.println("Target: " + nav.getTarget());
+				System.out.println("Location: " + this.r.getRc().getLocation());
 				this.state = SoldierState.HOLD;
 			} else {
 				nav.doMove();
@@ -182,7 +184,10 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			
 			break;
 		case LOST:
-			this.r.getNav().setTarget(this.r.getRc().senseAlliedArchons()[0]);
+			MapLocation archonLoc = this.r.getRc().senseAlliedArchons()[0];
+			System.out.println("Archon loc = " + archonLoc);
+			System.out.println("My loc = " + this.r.getRc().getLocation());
+			this.r.getNav().setTarget(archonLoc, false);
 			this.state = SoldierState.MOVE;
 			turnsHolding = 0;
 			break;
