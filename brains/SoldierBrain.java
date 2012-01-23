@@ -9,6 +9,7 @@ import team035.messages.SRobotInfo;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.robots.BaseRobot;
+import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
@@ -27,6 +28,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		LOST,
 		LOW_FLUX,
 		OUT_OF_FLUX,
+		WAIT
 	}
 
 	protected SoldierState state;
@@ -42,7 +44,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	public SoldierBrain(BaseRobot r) {
 		super(r);
 
-		state = SoldierState.HOLD;
+		state = SoldierState.WAIT;
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
@@ -76,6 +78,13 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		this.displayState();
 
 		switch(this.state) {
+		case WAIT:
+			// this is the more serious do nothing command
+			if(Clock.getRoundNum() > ArchonBrain.ATTACK_TIMING) {
+				// Break out just in case we missed a message
+				this.state = SoldierState.HOLD;
+			}
+			break;
 		case HOLD:
 			// do nothing! we're waiting for someone to tell us where to go.
 			turnsHolding++;

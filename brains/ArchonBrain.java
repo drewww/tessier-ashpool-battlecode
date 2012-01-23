@@ -33,11 +33,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_FLUX = 20;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
+	public final static int ATTACK_TIMING = 1000;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 
 	protected enum ArchonState {
-		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING
+		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
+		BUILDUP
 	}
 
 	
@@ -62,6 +64,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		r.getRadar().setEnemyTargetBroadcast(true);
 		this.initCooldowns();
 		this.initStateStack();
+		this.pushState(ArchonState.BUILDUP);
 	}
 
 	
@@ -73,6 +76,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		
 		this.displayState();
 		switch(this.getState()) {
+		case BUILDUP:
+			buildup();
+			break;
 		case LOITERING:
 			loiter();
 			break;
@@ -118,8 +124,50 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		case SPREADING:
 			stateString = "SPREADING";
 			break;
+		case BUILDUP:
+			stateString = "BUILDUP";
+			break;
 		}
+		
 		this.r.getRc().setIndicatorString(0, stateString);
+	}
+	
+	protected void buildup() {
+    if(this.isNearArchons() && spreadingCooldown == 0) {
+    	System.out.println("Archon loitering->spreading");
+    	this.pushState(ArchonState.SPREADING);
+    	spread();
+    	return;
+    }
+    	
+    if(Clock.getRoundNum() > ATTACK_TIMING) {
+    	System.out.println("Triggering attack!");
+    	this.popState();
+    	return;
+    }
+    
+    RobotController rc = this.r.getRc();
+    if(canSpawn()) {
+    	spawnRobotIfPossible();	
+    } else if(!rc.isMovementActive()) {
+    	MapLocation myLoc = rc.getLocation();
+    	for(Direction heading: Direction.values()) {
+    		if(heading != Direction.NONE && heading != Direction.OMNI) {
+    			if(canSpawn(heading)) {
+    				try {
+      				rc.setDirection(heading);
+      				return;
+    				} catch (GameActionException e) {
+    					e.printStackTrace();
+    					return;
+    				}
+    			}
+    		}
+    	}
+    	// we're crowded in, so send a move command
+    	MapLocation closeNode = getRandomCapturableNode();
+      this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(closeNode));
+    }
 	}
 	
 	protected void evade() {
@@ -433,9 +481,26 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			}
 		}
 		
+
+		
 	}
 	
 	// Helper stuffs
+	
+	protected boolean canSpawn(Direction heading) {
+		RobotController rc = this.r.getRc();
+		try {
+			return r.getRc().canMove(heading) &&
+					 r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(heading), RobotLevel.POWER_NODE) == null;
+		} catch (GameActionException e) {
+			e.printStackTrace();
+			return false;
+		}		
+	}
+	
+	protected boolean canSpawn() {
+		return canSpawn(this.r.getRc().getDirection());
+	}
 	
 	protected boolean refuelRobotsIfPossible() {
 		RobotController rc = this.r.getRc();
