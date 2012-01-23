@@ -286,7 +286,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			System.out.println("updating move target to: " + mom.moveTo);
 			this.r.getNav().setTarget(mom.moveTo, 3);
 			
-			if(this.state==SoldierState.HOLD) {
+			if(this.state==SoldierState.HOLD || this.state==SoldierState.WAIT) {
 				this.state = SoldierState.MOVE;
 			}
 		} else if (msg.msg.getType()==LowFluxMessage.type) {
