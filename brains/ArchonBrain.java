@@ -32,6 +32,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int SPREADING_COOLDOWN_VALUE = 3;
 	protected final static int REFUEL_FLUX = 20;
 	protected final static int REFUEL_THRESHOLD = 10;
+	protected final static int MOVE_FAIL_COUNTER = 100;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 
@@ -50,6 +51,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected double fluxTransferAmount = 0.0;
 	protected int spreadingCooldown;
 	protected int buildingCooldown;
+	protected int moveFailCooldown;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -338,9 +340,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		
 		NavController nav = this.r.getNav();
 		nav.doMove();
-		if(nav.isAtTarget()) {
+		if(nav.isAtTarget() || moveFailCooldown <= 0) {
 			this.popState();
-			System.out.println("Done moving");			
+			if(moveFailCooldown <= 0) {
+				System.out.println("Move Failed!");
+			}
 		}
 	}	
 	
@@ -505,11 +509,15 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(buildingCooldown > 0) {
 			buildingCooldown--;
 		}
+		if(moveFailCooldown > 0 && this.getState() == ArchonState.MOVING) {
+			moveFailCooldown--;
+		}
 	}
 	
 	protected void initCooldowns() {
 		this.spreadingCooldown = 0;
 		this.buildingCooldown = 0;
+		this.moveFailCooldown = 0;
 	}
 
 	// Stack state stuffs
@@ -527,6 +535,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		} else {
 			this.stateStackTop++;
 		}
+		
+		if(state == ArchonState.MOVING) {
+			this.moveFailCooldown = MOVE_FAIL_COUNTER;
+		}
+		
 		// Check to see if we need to expand the stack size
 		if(this.stateStackTop >= this.stateStack.length) {
 			ArchonState[] newStack = new ArchonState[this.stateStack.length*2];

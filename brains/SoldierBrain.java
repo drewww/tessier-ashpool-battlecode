@@ -33,7 +33,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 
 	protected final static double PLENTY_OF_FLUX_THRESHOLD = 20.0;
 	protected final static double LOW_FLUX_THRESHOLD = 10.0;
-	protected final static double OUT_OF_FLUX = 1.0;
+	protected final static double OUT_OF_FLUX_THRESHOLD = 5.0;
 	protected final static double LOST_THRESHOLD = 20;
 	
 	protected int turnsHolding = 0;
@@ -52,8 +52,10 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	@Override
 	public void think() {
 		// do some global environmental state checks in order of precedence.
-		if(this.r.getRc().getFlux() < OUT_OF_FLUX) {
-			
+		if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
+			this.r.getRadio().setEnabled(false);
+			this.r.getRadar().setEnabled(false);
+			this.state = SoldierState.OUT_OF_FLUX;
 			// turn the radio off, shutdown the radar
 		} else if(this.r.getRc().getFlux() < SoldierBrain.LOW_FLUX_THRESHOLD) {
 			this.state = SoldierState.LOW_FLUX;
@@ -208,18 +210,20 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			
 		case OUT_OF_FLUX:
 			// check to see if our flux level is back up.
-			if(this.r.getRc().getFlux() > OUT_OF_FLUX) {
+			if(this.r.getRc().getFlux() > LOW_FLUX_THRESHOLD) {
 				// what should we transition into? move?
-				this.state = SoldierState.HOLD;
-				
+				this.r.getRadio().setEnabled(true);
+				this.r.getRadar().setEnabled(true);				
+				this.state = SoldierState.LOST;
 				// turn the radar+radio back on, etc.
 			}
 			
-			if(turnsSinceLastOutOfFluxMessage >= 30) {
-				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));
-				turnsSinceLastOutOfFluxMessage = 0;
-			}
-			turnsSinceLastOutOfFluxMessage++;
+//			if(turnsSinceLastOutOfFluxMessage >= 30) {
+//				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));
+//				turnsSinceLastOutOfFluxMessage = 0;
+//			}
+//			turnsSinceLastOutOfFluxMessage++;
+//			break;
 			break;
 		}
 	}
