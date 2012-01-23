@@ -32,7 +32,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	protected SoldierState state;
 
 	protected final static double PLENTY_OF_FLUX_THRESHOLD = 20.0;
-	protected final static double LOW_FLUX_THRESHOLD = 5.0;
+	protected final static double LOW_FLUX_THRESHOLD = 10.0;
 	protected final static double OUT_OF_FLUX = 1.0;
 	protected final static double LOST_THRESHOLD = 20;
 	
@@ -64,7 +64,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// we only get here if we don't see any robots ourselves, but 
 			// OTHER people see robots to attack. But we prefer to transition
 			// into ATTACK if we can.
-			
+			System.out.println("Setting state to SEEK_TARGET");
 			this.state = SoldierState.SEEK_TARGET;
 		}
 
@@ -96,7 +96,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			break;
 		case SEEK_TARGET:
 			
-			if(r.getRc().isMovementActive()) break;
+			//if(r.getRc().isMovementActive()) break;
 			
 			// we don't see anyone bad, but others near us do. 
 			// so, turn towards the nearest target.
@@ -118,13 +118,15 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			if(target==null) {
 				// this shouldn't happen - we won't be in this
 				System.out.println("Seeking enemy with no valid targets!");
+				System.out.println("Remote enemies length: " + r.getCache().getRemoteRobots().length);
+				System.out.println("Remote enemies number: " + r.getCache().numRemoteRobots);
 				this.state = SoldierState.HOLD;
 				break;
 			}
 									// state if there are no enemies
 			
 			// move towards the target
-			this.r.getNav().setTarget(target.location, 3);
+			this.r.getNav().setTarget(target.location, 0);
 			this.state = SoldierState.MOVE;
 			nav = this.r.getNav();
 			if(nav.isAtTarget()) this.state = SoldierState.HOLD;
