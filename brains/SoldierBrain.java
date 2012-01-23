@@ -52,15 +52,15 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	@Override
 	public void think() {
 		// do some global environmental state checks in order of precedence.
-		if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
+		if(r.getCache().numEnemyRobotsInAttackRange > 0) {
+			this.state = SoldierState.ATTACK;
+		} else if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
 			this.r.getRadio().setEnabled(false);
 			this.r.getRadar().setEnabled(false);
 			this.state = SoldierState.OUT_OF_FLUX;
 			// turn the radio off, shutdown the radar
 		} else if(this.r.getRc().getFlux() < SoldierBrain.LOW_FLUX_THRESHOLD) {
 			this.state = SoldierState.LOW_FLUX;
-		} else if(r.getCache().numEnemyRobotsInAttackRange > 0) {
-			this.state = SoldierState.ATTACK;
 		} else if(r.getCache().numRemoteRobots > 0) {
 			
 			// we only get here if we don't see any robots ourselves, but 
