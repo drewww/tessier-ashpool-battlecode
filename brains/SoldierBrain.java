@@ -210,6 +210,12 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				System.out.println("in low flux mode, moving to " + nearestFriendlyArchon);
 
 				this.r.getNav().setTarget(nearestFriendlyArchon, true);
+				// limp towards archon!
+				//this.r.getNav().setTarget(target.location, 0);
+				this.state = SoldierState.MOVE;
+				nav = this.r.getNav();
+				if(nav.isAtTarget()) this.state = SoldierState.HOLD;
+				nav.doMove();				
 			}
 			break;
 			
