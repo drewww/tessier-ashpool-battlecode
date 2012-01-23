@@ -33,7 +33,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_FLUX = 20;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
-	public final static int ATTACK_TIMING = 500;
+	public final static int ATTACK_TIMING = 1000;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 
