@@ -14,6 +14,13 @@ public class NavController {
 		PATHING, BUGGING, DOCKING
 	}
 
+	protected static final Direction[] compass = {
+		Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
+		Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
+		Direction.WEST, Direction.NORTH_WEST
+	};
+	protected static final int WITHIN_EPSILON_THRESHOLD = 2;
+	
 	protected BaseRobot r;
 	protected MapLocation target;
 	protected MapLocation dockingTarget;
@@ -28,12 +35,7 @@ public class NavController {
 	private Direction startDesiredDir;
 	private boolean hugLeft;
 	private boolean goneAround;
-
-	protected static final Direction[] compass = {
-		Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, 
-		Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST,
-		Direction.WEST, Direction.NORTH_WEST
-	};
+	
 
 	public NavController(BaseRobot r) {
 		this.r = r;
@@ -92,6 +94,7 @@ public class NavController {
 	public void setTarget(MapLocation loc, int epsilon) {
 		this.target = loc;
 		this.epsilon = epsilon;
+		this.withinEpsilon = 0;
 	}
 
 	public void setTarget(MapLocation loc, boolean isDocking) {
@@ -145,7 +148,8 @@ public class NavController {
 
 	public boolean isAtTarget() {
 
-		if(mode == Mode.DOCKING) {
+		if(mode == Mode.DOCKING ||
+			 (mode == Mode.BUGGING && preBuggingMode == Mode.DOCKING)) {
 			return this.r.getRc().getLocation().isAdjacentTo(this.dockingTarget); 
 		}
 		
@@ -156,10 +160,11 @@ public class NavController {
 			return true;
 		}
 		if(distance <= this.epsilon*this.epsilon) {
+			System.out.println("Within epsilon. Count: " + withinEpsilon);
 			withinEpsilon++;
 
-			if(withinEpsilon > 3) {
-				withinEpsilon = 0;
+			if(withinEpsilon >= WITHIN_EPSILON_THRESHOLD) {
+				//withinEpsilon = 0;
 				return true;
 			}
 		} else {

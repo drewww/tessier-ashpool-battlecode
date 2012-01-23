@@ -31,6 +31,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int BUILDING_COOLDOWN_VALUE = 8;
 	protected final static int SPREADING_COOLDOWN_VALUE = 3;
 	protected final static int REFUEL_FLUX = 20;
+	protected final static int REFUEL_THRESHOLD = 10;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 
@@ -440,7 +441,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			if(this.r.getRc().getFlux() >= REFUEL_FLUX &&
 				robot.type != RobotType.ARCHON &&
 				robot.type != RobotType.TOWER &&
-				robot.flux < 10) {
+				robot.flux < REFUEL_THRESHOLD) {
 				this.queueFluxTransfer(robot.location, RobotLevel.ON_GROUND,  REFUEL_FLUX);
 				this.r.getNav().setTarget(robot.location, true);
 				this.pushState(ArchonState.MOVING);

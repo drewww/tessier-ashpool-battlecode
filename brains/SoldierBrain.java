@@ -87,8 +87,12 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			turnsHolding = 0;
 			
 			NavController nav = this.r.getNav();
-			if(nav.isAtTarget()) this.state = SoldierState.HOLD;
-			nav.doMove();
+			if(nav.isAtTarget()) {
+				System.out.println("Soldier reached target");
+				this.state = SoldierState.HOLD;
+			} else {
+				nav.doMove();
+			}
 			break;
 		case SEEK_TARGET:
 			
