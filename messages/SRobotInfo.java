@@ -9,9 +9,6 @@ import battlecode.common.RobotType;
 import battlecode.common.Team;
 
 public class SRobotInfo implements Serializable {
-	/**
-	 * foo
-	 */
 	private static final long serialVersionUID = 1L;
 	public Direction direction;
 	public double energon;
@@ -20,6 +17,8 @@ public class SRobotInfo implements Serializable {
 	public SRobot robot;
 	public RobotType type;
 	public Team team;
+	public int roundsUntilMovementIdle;
+	public int roundsUntilAttackIdle;
 	
 	public SRobotInfo(RobotInfo info) {
 		this.direction = info.direction;
@@ -28,9 +27,11 @@ public class SRobotInfo implements Serializable {
 		this.location = info.location;
 		this.robot = new SRobot(info.robot);
 		this.type = info.type;
+		this.roundsUntilMovementIdle = info.roundsUntilMovementIdle;
+		this.roundsUntilAttackIdle = info.roundsUntilAttackIdle;
 	}
 	
 	public RobotInfo toRobotInfo() {
-		return new RobotInfo(null, location, energon, energon, direction, type, team, false);
+		return new RobotInfo(null, location, energon, energon, direction, type, team, false, roundsUntilAttackIdle, roundsUntilMovementIdle);
 	}
 }
