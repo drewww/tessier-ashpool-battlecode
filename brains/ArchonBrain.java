@@ -23,10 +23,14 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
+import battlecode.common.TerrainTile;
 
 public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static double NODE_DETECTION_RADIUS_SQ = 16;
 	protected final static double INITIAL_ROBOT_FLUX = 30;
+	protected final static int BUILDING_COOLDOWN_VALUE = 8;
+	protected final static int SPREADING_COOLDOWN_VALUE = 3;
+	protected final static int REFUEL_FLUX = 20;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 
@@ -34,6 +38,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING
 	}
 
+	
 	protected ArchonState state;
 	protected MapLocation nodeBuildLocation;
 	protected PowerNode targetPowerNode;
@@ -42,7 +47,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected MapLocation fluxTransferLoc = null;
 	protected RobotLevel fluxTransferLevel = null;
 	protected double fluxTransferAmount = 0.0;
-	private int spreadingCooldown;
+	protected int spreadingCooldown;
+	protected int buildingCooldown;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -150,7 +156,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 
 	protected void scanForEnemies() {
 		if(r.getCache().numEnemyAttackRobotsInRange > 0) {
-			System.out.println("Enemy detected. Evading!");
 			if(this.getState() != ArchonState.EVADING &&
 				this.getState() != ArchonState.REFUELING) {
 				this.pushState(ArchonState.EVADING);
@@ -158,7 +163,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		}
 		else {
 			if(this.getState() == ArchonState.EVADING) {
-				System.out.println("Enemy gone. Stopping evasion.");
 				this.popState();
 			}
 		}
@@ -169,7 +173,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected void refuel() {
 		GameObject go;
 		try {
-			go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
+			//go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
+			go = this.r.getRc().senseObjectAtLocation(fluxTransferLoc, fluxTransferLevel);
 			if(go!=null) {
 				System.out.println("Refueled a robot!");
 				this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
@@ -185,6 +190,18 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	
 	protected void loiter() {
+		MapLocation nearestNode = this.getNearestCapturableNode();
+		if(nearestNode.isAdjacentTo(this.r.getRc().getLocation())
+				&& this.buildingCooldown == 0) {
+			this.pushState(ArchonState.BUILDING);
+			build();
+			return;
+		}
+		
+		if(refuelRobotsIfPossible() ) {
+			return;
+		}
+		
     if(this.isNearArchons() && spreadingCooldown == 0) {
     	System.out.println("Archon loitering->spreading");
     	this.pushState(ArchonState.SPREADING);
@@ -198,15 +215,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     this.r.getNav().setTarget(nearNodeLoc, true);
     this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
     
-    this.popState();
     this.pushState(ArchonState.MOVING);
     System.out.println("Archon loitering->moving");
-    this.nodeBuildLocation = nearNodeLoc;
     this.move();
 	}
 	
 	protected void spread() {
-		System.out.println("Trying to spread!");
     StateCache cache = r.getCache();
     RobotController rc = r.getRc();
     MapLocation myLoc = rc.getLocation();		
@@ -222,15 +236,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     	if(myLoc.distanceSquaredTo(archonLoc) <= GameConstants.PRODUCTION_PENALTY_R2) {
     		nearbyArchons++;
     		centroid = centroid.add(archonLoc.x, archonLoc.y);
-    		System.out.println("Computed centroid to be " + centroid);
     	}
     }
     if(nearbyArchons > 0) {
     	// check we can move
 	    if(!rc.isMovementActive()) {
 		    centroid = new MapLocation((int)((float)centroid.x / nearbyArchons), (int)((float)centroid.y / nearbyArchons));
-		    System.out.println("Computed centroid to be " + centroid);
-		    System.out.println("I'm at " + myLoc);
 		    Direction towardsCentroid = myLoc.directionTo(centroid);
 		    Direction awayFromCentroid = towardsCentroid.opposite();
 		    if(towardsCentroid == Direction.OMNI || towardsCentroid == Direction.NONE) {
@@ -276,7 +287,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     // something went wrong, so fail and don't try again for 3 turns.	
     if(spreadBlocked) {
     	System.out.println("Spread blocked! Starting cooldown.");
-    	this.spreadingCooldown = 3;
+    	this.spreadingCooldown = SPREADING_COOLDOWN_VALUE;
     	this.popState();
     }
 	}
@@ -287,32 +298,32 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		NavController nav = this.r.getNav();
 		RobotController rc = this.r.getRc();
 		try {
-			if(nav.isAtTarget()) {
-				
+			MapLocation nearestNode = this.getNearestCapturableNode();
+			if(nearestNode.isAdjacentTo(rc.getLocation())) {
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.BROADCAST), new ClaimNodeMessage(this.nodeBuildLocation));
 				
-				Direction nodeDirection = rc.getLocation().directionTo(nodeBuildLocation);
+				Direction nodeDirection = rc.getLocation().directionTo(nearestNode);
 				if(rc.getDirection() != nodeDirection) {
 					if(!rc.isMovementActive()) {
 						rc.setDirection(nodeDirection);
 						return;
 					}			
 				}
-				if(rc.getFlux() >= RobotType.TOWER.spawnCost) {
-					if(!rc.isMovementActive()) {
-						GameObject targetContent = rc.senseObjectAtLocation(nodeBuildLocation, RobotLevel.ON_GROUND);
-						if(targetContent == null) {
+				GameObject targetContent = rc.senseObjectAtLocation(nearestNode, RobotLevel.ON_GROUND);
+				if(targetContent == null) {
+					if(rc.getFlux() >= RobotType.TOWER.spawnCost) {
+						if(!rc.isMovementActive()) {
 							rc.spawn(RobotType.TOWER);					
 						}
-						this.popState();
-						this.pushState(ArchonState.LOITERING);
-						System.out.println("Archon building->loitering");
-						return;
 					}
-
+				} else {
+					// this either means we built it or someone messed with us
+					this.popState();
+					System.out.println("Archon building->loitering");
+					return;
 				}
 			} else {
-				nav.doMove();
+				this.popState();
 			}
 		} catch (GameActionException e) {
 			e.printStackTrace();
@@ -320,7 +331,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void move() {
-		
 		if(this.spawnRobotIfPossible()) {
 			return;
 		}
@@ -329,9 +339,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		nav.doMove();
 		if(nav.isAtTarget()) {
 			this.popState();
-			this.pushState(ArchonState.BUILDING);
-			System.out.println("Archon moving->building");			
-			build();
+			System.out.println("Done moving");			
 		}
 	}	
 	
@@ -346,20 +354,23 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected boolean spawnRobotIfPossible() {
-		
+
 		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > RobotType.SOLDIER.spawnCost + INITIAL_ROBOT_FLUX) {
-			
-			if(r.getRc().canMove(r.getRc().getDirection())) {
-				try {
+			try {			
+				if(r.getRc().canMove(r.getRc().getDirection()) &&
+						r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), 
+								RobotLevel.POWER_NODE) == null) {
+
 					r.getRc().spawn(RobotType.SOLDIER);
-					this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, 0.9*INITIAL_ROBOT_FLUX);;
+					this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND, 0.9*INITIAL_ROBOT_FLUX);
 					System.out.println("Spawned a robot.");
 					return true;
-				} catch (GameActionException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
 				}
+			} catch (GameActionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
+
 		}
 		return false;
 	}
@@ -387,22 +398,22 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(msg.msg.getType()==ClaimNodeMessage.type) {
 			ClaimNodeMessage claimMessage = (ClaimNodeMessage) msg.msg;
 			MapLocation claimLocation = claimMessage.loc;
-			if(this.getState() == ArchonState.MOVING &&
-					claimLocation.equals(this.nodeBuildLocation)) {
-				this.popState();
-				this.pushState(ArchonState.LOITERING);			
+			if(this.getState() == ArchonState.LOITERING || 
+				 this.getState() == ArchonState.MOVING) {
+				this.buildingCooldown = BUILDING_COOLDOWN_VALUE;
 			}
 		}
 		
 		if(msg.msg.getType()==LowFluxMessage.type) {
 			LowFluxMessage lowFluxMessage = (LowFluxMessage) msg.msg;
+			System.out.println("Received a refueling request!");
 			
 			if(this.r.getRc().getLocation().distanceSquaredTo(lowFluxMessage.loc)<=2) {
 				
 				
 				// do a transfer.
 				if(this.getState() != ArchonState.REFUELING) {
-					double amountToTransfer = INITIAL_ROBOT_FLUX*0.75;
+					double amountToTransfer = REFUEL_FLUX;
 					
 					if(amountToTransfer > this.r.getRc().getFlux()) {
 						amountToTransfer = this.r.getRc().getFlux();
@@ -412,12 +423,33 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 					System.out.println("Archon refueling!");
 					this.pushState(ArchonState.REFUELING);
 				}
+			} else {
+				System.out.println("Requester was out of range.");
 			}
 		}
 		
 	}
 	
 	// Helper stuffs
+	
+	protected boolean refuelRobotsIfPossible() {
+		RobotController rc = this.r.getRc();
+		StateCache cache = this.r.getCache();
+		RobotInfo[] nearBots = cache.getFriendlyRobots();
+		for(RobotInfo robot : nearBots) {
+			if(this.r.getRc().getFlux() >= REFUEL_FLUX &&
+				robot.type != RobotType.ARCHON &&
+				robot.type != RobotType.TOWER &&
+				robot.flux < 10) {
+				this.queueFluxTransfer(robot.location, RobotLevel.ON_GROUND,  REFUEL_FLUX);
+				this.r.getNav().setTarget(robot.location, true);
+				this.pushState(ArchonState.MOVING);
+				return true;
+			}
+		}
+		return false;
+		
+	}
 	
 	protected boolean isNearArchons() {
     StateCache cache = r.getCache();
@@ -469,10 +501,14 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(spreadingCooldown > 0) {
 			spreadingCooldown--;
 		}
+		if(buildingCooldown > 0) {
+			buildingCooldown--;
+		}
 	}
 	
 	protected void initCooldowns() {
 		this.spreadingCooldown = 0;
+		this.buildingCooldown = 0;
 	}
 
 	// Stack state stuffs
@@ -485,21 +521,23 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void pushState(ArchonState state) {
-		this.stateStackTop++;
+		if(this.stateStackTop < 0) {
+			this.stateStackTop = 0;
+		} else {
+			this.stateStackTop++;
+		}
 		// Check to see if we need to expand the stack size
-		if(this.stateStack.length <= this.stateStackTop) {
+		if(this.stateStackTop >= this.stateStack.length) {
 			ArchonState[] newStack = new ArchonState[this.stateStack.length*2];
-			System.out.println("State stack top: "  + this.stateStackTop);
-			System.out.print("Growing stack: [ ");
 			for(int i = 0; i < this.stateStack.length; ++i) {
-				System.out.print(" " +  this.stateStack[i]  + " ");
 				newStack[i] = this.stateStack[i];
 			}
-			System.out.print(" ]\n");
 			this.stateStack = newStack;
+			System.out.println("Grew stack:");
+			printStack();
 		}
 		this.stateStack[this.stateStackTop] = state;
-		System.out.println("Pushed state. New top is: "  + this.stateStackTop);
+		printStack();
 	}
 
 	protected ArchonState popState() {
@@ -507,7 +545,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(this.stateStackTop >= 0) {
 			this.stateStackTop--;	
 		}
-		System.out.println("Popped state. New top is: " + this.stateStackTop);
+		printStack();
 		// Push the default loitering state if somehow we popped the last state
 		return state;
 	}
@@ -516,6 +554,15 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.stateStack = new ArchonState[10];
 		this.stateStackTop = -1;
 		this.pushState(ArchonState.LOITERING);
+	}
+	
+	protected void printStack() {
+		System.out.println("State stack top: "  + this.stateStackTop);
+		System.out.print("Stack: [ ");
+		for(int i = 0; i <= this.stateStackTop; ++i) {
+			System.out.print(" " +  this.stateStack[i]  + " ");
+		}
+		System.out.print(" ]\n");
 	}
 	
 }

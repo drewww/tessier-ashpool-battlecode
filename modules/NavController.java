@@ -6,6 +6,7 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
 import battlecode.common.RobotLevel;
+import battlecode.common.RobotType;
 import battlecode.common.TerrainTile;
 
 public class NavController {
@@ -144,6 +145,10 @@ public class NavController {
 
 	public boolean isAtTarget() {
 
+		if(mode == Mode.DOCKING) {
+			return this.r.getRc().getLocation().isAdjacentTo(this.dockingTarget); 
+		}
+		
 		int distance = target.distanceSquaredTo(this.r.getRc().getLocation());
 
 		if(distance==0) {
@@ -165,25 +170,27 @@ public class NavController {
 	}
 
 	protected boolean isValidMove(Direction dir) {
-		switch (r.getRc().getType()) {
-		case SOLDIER:
+//		switch (r.getRc().getType()) {
+//		case SOLDIER:
 			MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
 			MapLocation frontLoc = r.getRc().getLocation().add(dir);
 			for (MapLocation loc :nodeLocs) {
-				if(frontLoc.equals(loc) || frontLoc.equals(loc.add(Direction.SOUTH))) {
+				if(frontLoc.equals(loc) || 
+					(r.getRc().getType() == RobotType.SOLDIER && frontLoc.equals(loc.add(Direction.SOUTH)))) {
 					return false;
 				}
 			}
 			if(!r.getCache().canMove(dir)) {
 				return false;
 			}
-			break;
-		case ARCHON:
-			if(!r.getCache().canMove(dir)) {
-				return false;
-			}
-		}
-		return true;
+			return true;
+//			break;
+//		case ARCHON:
+//			if(!r.getCache().canMove(dir)) {
+//				return false;
+//			}
+//		}
+//		return true;
 	}
 
 
@@ -322,11 +329,6 @@ public class NavController {
 
 
 	private boolean canMove(Direction dir) {
-		System.out.println("prohibitedDirs.length: " + prohibitedDirs.length);
-		System.out.println("BLOCK_DIRS[0].length: " + BLOCK_DIRS[0].length);
-		System.out.println("BLOCK_DIRS[1].length: " + BLOCK_DIRS[1].length);
-		System.out.println("BLOCK_DIRS[2].length: " + BLOCK_DIRS[2].length);
-
 		if (BLOCK_DIRS[prohibitedDirs[0]][prohibitedDirs[1]][dir.ordinal()]) {
 			return false;
 		}
@@ -356,6 +358,7 @@ public class NavController {
 	}
 
 	protected void reset() {
+		this.prohibitedDirs = new int[3];
 		for(int i = 0; i < 3; i++) {
 			this.prohibitedDirs[i] = Direction.NONE.ordinal();
 		}

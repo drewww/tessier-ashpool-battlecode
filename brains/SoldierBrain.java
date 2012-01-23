@@ -12,6 +12,7 @@ import team035.robots.BaseRobot;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
+import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
@@ -33,6 +34,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	protected final static double PLENTY_OF_FLUX_THRESHOLD = 20.0;
 	protected final static double LOW_FLUX_THRESHOLD = 5.0;
 	protected final static double OUT_OF_FLUX = 1.0;
+	protected final static double LOST_THRESHOLD = 20;
 	
 	protected int turnsHolding = 0;
 	protected int turnsSinceLastOutOfFluxMessage = 0;
@@ -76,7 +78,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// do nothing! we're waiting for someone to tell us where to go.
 			turnsHolding++;
 			
-			if(turnsHolding > 1000) {
+			if(turnsHolding > LOST_THRESHOLD) {
 				this.state = SoldierState.LOST;
 			}
 			
@@ -109,30 +111,21 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				}
 			}
 			
-			if(target==null) break; // this shouldn't happen - we won't be in this
+			if(target==null) {
+				// this shouldn't happen - we won't be in this
+				System.out.println("Seeking enemy with no valid targets!");
+				this.state = SoldierState.HOLD;
+				break;
+			}
 									// state if there are no enemies
 			
- 
-			try {
-				// now point ourselves at that enemy / move towards them.
-				Direction targetDirection =r.getRc().getLocation().directionTo(target.location); 
-				if(r.getRc().getDirection().equals(targetDirection)) {
-					if(r.getRc().canMove(targetDirection)) {
-						System.out.println("Soldier heading for target!");
-						r.getRc().moveForward();
-					} else {
-						// we're blocked, so switch back to move mode
-						this.state = SoldierState.MOVE;
-					}
-				}
-				else r.getRc().setDirection(targetDirection);
-			} catch (GameActionException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			// move towards the target
+			this.r.getNav().setTarget(target.location, 3);
+			this.state = SoldierState.MOVE;
+			nav = this.r.getNav();
+			if(nav.isAtTarget()) this.state = SoldierState.HOLD;
+			nav.doMove();
 			
-			// the way we transition out of this is we see something to attack on
-			// our OWN scanners.
 			break;
 		case ATTACK:
 			
@@ -148,18 +141,34 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// now target selection is really dumb - pick the first one in range
 			for(RobotInfo enemy : enemies) {
 				if(r.getRc().canAttackSquare(enemy.location)) {
+					// skip if it's a tower and there are other baddies around or if
+					// it's a tower not connected to the graph
+					if((enemy.type == RobotType.TOWER && r.getCache().numEnemyAttackRobotsInRange > 0) ||
+							isInvulnerableTower(enemy)) {
+						continue;
+					}
 					RobotLevel l = RobotLevel.ON_GROUND;
-					if(enemy.type == RobotType.SCOUT) {
+					if(enemy.type == RobotType.SCOUT)
 						l = RobotLevel.IN_AIR;
-					} 
+ 
 					
 					try {
+						// face the enemy if possible
+						RobotController rc = this.r.getRc();
+						Direction towardsEnemy = rc.getLocation().directionTo(enemy.location);
+						if(rc.getDirection() != towardsEnemy) {
+							if(!rc.isMovementActive()) {
+								rc.setDirection(towardsEnemy);
+							}
+						}
+						// BLAM!
 						r.getRc().attackSquare(enemy.location, l);
 						break;
 					} catch (GameActionException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
+					
 				}
 			}
 			
@@ -173,13 +182,15 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// if we're in low flux mode, we want to path to our nearest archon
 			// and then ask it for flux.
 			if(this.r.getRc().getFlux() > SoldierBrain.LOW_FLUX_THRESHOLD) {
+				System.out.println("someone refueled me!");
 				this.state = SoldierState.HOLD;
 				break;
 			}
 			
 			MapLocation nearestFriendlyArchon = this.r.getCache().getNearestFriendlyArchon();
 			
-			if(this.r.getRc().getLocation().distanceSquaredTo(nearestFriendlyArchon)==2) {
+			if(this.r.getRc().getLocation().distanceSquaredTo(nearestFriendlyArchon)<=2) {
+				System.out.println("there's an archon nearby that can refuel me!");
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.ROBOT_TYPE, RobotType.ARCHON), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));				
 			} else {
 				
@@ -259,5 +270,19 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				}
 			}
 		}
+	}
+	
+	public boolean isInvulnerableTower(RobotInfo robot) {
+		if(robot.type == RobotType.TOWER) {
+			MapLocation[] towerLocs = this.r.getCache().senseCapturablePowerNodes();
+			MapLocation robotLoc = robot.location;
+			for(MapLocation loc : towerLocs) {
+				if(loc.equals(robotLoc)) {
+					return false;
+				}			
+			}
+			return true;
+		}
+		return false;
 	}
 }

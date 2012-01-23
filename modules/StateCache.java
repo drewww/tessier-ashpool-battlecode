@@ -64,8 +64,10 @@ public class StateCache {
 	}
 
 	public void addRemoteRobot(SRobotInfo robotInfo) {
-		this.remoteRobots[numRemoteRobots] = robotInfo;
-		numRemoteRobots++;
+		if(!isInvulnerableTower(robotInfo.toRobotInfo())) {
+			this.remoteRobots[numRemoteRobots] = robotInfo;
+			numRemoteRobots++;
+		}
 	}
 	
 	public SRobotInfo[] getRemoteRobots() {
@@ -86,7 +88,8 @@ public class StateCache {
 			this.enemyRobots[numEnemyRobotsInRange] = r;
 			numEnemyRobotsInRange++;
 			if(r.location.distanceSquaredTo(this.r.getRc().getLocation()) <=
-				 this.r.getRc().getType().attackRadiusMaxSquared) {
+				 this.r.getRc().getType().attackRadiusMaxSquared &&
+				 !isInvulnerableTower(r)) {
 				numEnemyRobotsInAttackRange++;
 			}
 			if(r.type != RobotType.TOWER &&
@@ -158,5 +161,19 @@ public class StateCache {
 		return this.r.getRc().senseCapturablePowerNodes();
 	}
 
+	
+	public boolean isInvulnerableTower(RobotInfo robot) {
+		if(robot.type == RobotType.TOWER) {
+			MapLocation[] towerLocs = this.r.getCache().senseCapturablePowerNodes();
+			MapLocation robotLoc = robot.location;
+			for(MapLocation loc : towerLocs) {
+				if(loc.equals(robotLoc)) {
+					return false;
+				}			
+			}
+			return true;
+		}
+		return false;
+	}
 
 }
