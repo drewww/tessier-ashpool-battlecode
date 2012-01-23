@@ -316,7 +316,7 @@ public class NavController {
 					return null;
 				}
 			}
-			// mark “recursed” as true and try hugging the other direction
+			// mark recursed as true and try hugging the other direction
 			return hug(desiredDir, true);
 		}
 		// If we're moving in a new cardinal direction, store it.
