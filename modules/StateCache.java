@@ -32,12 +32,13 @@ public class StateCache {
 	protected RobotInfo[] enemyRobots;
 	protected SRobotInfo[] remoteRobots;
 	protected RobotInfo[] enemyRobotsInAttackRange;
-	
+	protected RobotInfo[] enemyAttackRobotsInRange;
 	public int numRobotsInRange;
 	public int numFriendlyRobotsInRange;
 	public int numEnemyRobotsInRange;
 	public int numEnemyRobotsInAttackRange;
 	public int numEnemyAttackRobotsInRange;
+	
 	public int numRemoteRobots;
 
 	protected MapLocation nearestFriendlyArchon;
@@ -61,6 +62,7 @@ public class StateCache {
 		enemyRobots = new RobotInfo[MAX_ROBOTS];
 		remoteRobots = new SRobotInfo[MAX_ROBOTS];
 		enemyRobotsInAttackRange = new RobotInfo[MAX_ROBOTS];
+		enemyAttackRobotsInRange = new RobotInfo[MAX_ROBOTS];
 
 		friendlyArchonLocs = null;
 	}
@@ -96,6 +98,7 @@ public class StateCache {
 			}
 			if(newRobot.type != RobotType.TOWER &&
 				 newRobot.type != RobotType.ARCHON) {
+				this.enemyAttackRobotsInRange[numEnemyAttackRobotsInRange] = newRobot;
 				numEnemyAttackRobotsInRange++;
 			}
 		}
@@ -122,6 +125,14 @@ public class StateCache {
 		
 		return out;
 	}
+	
+	public RobotInfo[] getEnemyAttackRobotsInRange() {
+		RobotInfo[] out = new RobotInfo[numEnemyAttackRobotsInRange];
+		
+		System.arraycopy(this.enemyAttackRobotsInRange, 0, out, 0, numEnemyAttackRobotsInRange);
+		
+		return out;
+	}	
 
 	public RobotInfo[] getEnemyRobots() {
 		RobotInfo[] out = new RobotInfo[numEnemyRobotsInRange];

@@ -8,6 +8,7 @@ import team035.robots.BaseRobot;
 
 public class Log {
 	BaseRobot robot;
+	boolean recording = false; 
 	
 	public Log(BaseRobot r) {
 		this.robot = r;
@@ -15,12 +16,16 @@ public class Log {
 	
 	public void println(String text) {
 		System.out.println(text);
-		robot.getRc().addMatchObservation(text + "\n");
+		if(recording) {
+			robot.getRc().addMatchObservation(text + "\n");
+		}
 	}
 
 	public void print(String text) {
 		System.out.print(text);
-		robot.getRc().addMatchObservation(text);
+		if(recording) {
+			robot.getRc().addMatchObservation(text);
+		}
 	}
 
 	public void printStackTrace(Throwable throwable) {
@@ -29,7 +34,9 @@ public class Log {
     throwable.printStackTrace(printWriter);
     String message = result.toString();
     System.out.println(message);
-    robot.getRc().addMatchObservation(message);
+    if(recording) {
+    	robot.getRc().addMatchObservation(message);
+    }
 	}
 	
 	

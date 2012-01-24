@@ -83,6 +83,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		r.getLog().println("state: " + this.state);
 		
 		this.displayState();
+		this.shareFlux();
 
 		switch(this.state) {
 		case WAIT:
@@ -279,5 +280,31 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			return true;
 		}
 		return false;
+	}
+	
+	public void shareFlux() {
+		RobotController rc = r.getRc();
+		MapLocation myLoc = rc.getLocation();
+		for(RobotInfo robot : r.getCache().getFriendlyRobots()) {
+			if(robot.type == RobotType.TOWER || robot.type == RobotType.ARCHON) {
+				continue;
+			}
+			double fluxDifference = rc.getFlux() - robot.flux;
+			if(fluxDifference > 0.0) {
+				if(myLoc.isAdjacentTo(robot.location)) {
+					RobotLevel level = RobotLevel.ON_GROUND;
+					if(robot.type == RobotType.SCOUT) {
+						level = RobotLevel.IN_AIR;
+					}
+					try {
+						rc.transferFlux(robot.location, level, fluxDifference / 2.0);
+						r.getLog().println("Transfered flux!");
+					} catch (GameActionException e) {
+						// TODO Auto-generated catch block
+						r.getLog().printStackTrace(e);
+					}
+				}
+			}
+		}
 	}
 }

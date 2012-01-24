@@ -85,6 +85,13 @@ public class NavController {
 
 	protected void resetDocking() {
 		this.target = this.dockingTarget.add(Direction.SOUTH);
+		this.withinEpsilon = 0;
+		this.epsilon = 0;
+	}
+	
+	// use this for changing targets within a docking move
+	protected void moveTarget(MapLocation loc) {
+		this.target = loc;
 	}
 
 	public void setTarget(MapLocation loc) {
@@ -95,6 +102,7 @@ public class NavController {
 		this.target = loc;
 		this.epsilon = epsilon;
 		this.withinEpsilon = 0;
+		this.mode = Mode.PATHING;
 	}
 
 	public void setTarget(MapLocation loc, boolean isDocking) {
@@ -239,9 +247,9 @@ public class NavController {
 				if(!isClearLoc(this.target)) {
 					for(Direction testDir : compass) {
 						MapLocation testLoc = this.dockingTarget.add(testDir);
-						if(myLoc.distanceSquaredTo(testLoc) <= rc.getType().sensorRadiusSquared) {
+						if(rc.canSenseSquare(testLoc)) {
 							if(isClearLoc(testLoc)) {
-								this.target = testLoc;
+								moveTarget(testLoc);
 								break;
 							}
 						}

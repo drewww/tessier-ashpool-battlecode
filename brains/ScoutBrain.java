@@ -72,7 +72,8 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			r.getLog().println("Setting state to SEEK_TARGET");
 			this.state = ScoutState.SEEK_TARGET;
 		}
-
+		
+		this.shareFlux();
 
 		// no matter our state, check and see if we should heal
 		int unitsToHeal = 0;
@@ -116,26 +117,27 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			turnsHolding = 0;
 			
 			NavController nav = this.r.getNav();
-			if(nav.isAtTarget()) {
-				// recalculate the centroid as the new move target
-				RobotInfo[] friendlies = r.getCache().getFriendlyRobots();
-				MapLocation centroid = new MapLocation(0,0);
-				int soldiers = 0;
-		    for(RobotInfo friend: friendlies) {
-		    	if(friend.type!=RobotType.SOLDIER) {
-		    		continue;
-		    	}
-		    	soldiers++;
-		    	MapLocation friendLoc = friend.location; 
-		    	centroid = centroid.add(friendLoc.x, friendLoc.y);
-		    }
-		    if(soldiers==0) {
-		    	this.state = ScoutState.LOST;
-		    } else {
-		    	centroid = new MapLocation(centroid.x / soldiers, centroid.y / soldiers);
-		    }
-		    nav.setTarget(centroid);
-			} else {
+			
+			// recalculate the centroid as the new move target
+			RobotInfo[] friendlies = r.getCache().getFriendlyRobots();
+			MapLocation centroid = new MapLocation(0,0);
+			int soldiers = 0;
+	    for(RobotInfo friend: friendlies) {
+	    	if(friend.type!=RobotType.SOLDIER) {
+	    		continue;
+	    	}
+	    	soldiers++;
+	    	MapLocation friendLoc = friend.location; 
+	    	centroid = centroid.add(friendLoc.x, friendLoc.y);
+	    }
+	    if(soldiers==0) {
+	    	this.state = ScoutState.LOST;
+	    } else {
+	    	centroid = new MapLocation(centroid.x / soldiers, centroid.y / soldiers);
+	    }
+	    nav.setTarget(centroid);
+			
+			if(!nav.isAtTarget()) {
 				nav.doMove();
 			}
 			break;
@@ -303,5 +305,31 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			return true;
 		}
 		return false;
+	}
+	
+	public void shareFlux() {
+		RobotController rc = r.getRc();
+		MapLocation myLoc = rc.getLocation();
+		for(RobotInfo robot : r.getCache().getFriendlyRobots()) {
+			if(robot.type == RobotType.TOWER || robot.type == RobotType.ARCHON) {
+				continue;
+			}
+			double fluxDifference = rc.getFlux() - robot.flux;
+			if(fluxDifference > 0.0) {
+				if(myLoc.isAdjacentTo(robot.location)) {
+					RobotLevel level = RobotLevel.ON_GROUND;
+					if(robot.type == RobotType.SCOUT) {
+						level = RobotLevel.IN_AIR;
+					}
+					try {
+						rc.transferFlux(robot.location, level, fluxDifference / 2.0);
+						r.getLog().println("Transfered flux!");
+					} catch (GameActionException e) {
+						// TODO Auto-generated catch block
+						r.getLog().printStackTrace(e);
+					}
+				}
+			}
+		}
 	}
 }
