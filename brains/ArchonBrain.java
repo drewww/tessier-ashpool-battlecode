@@ -28,8 +28,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static double NODE_DETECTION_RADIUS_SQ = 16;
 	protected final static double INITIAL_ROBOT_FLUX = 25;
 	protected final static int BUILDING_COOLDOWN_VALUE = 8;
-	protected final static int SPREADING_COOLDOWN_VALUE = 3;
-	protected final static int REFUEL_FLUX = 20;
+	protected final static int SPREADING_COOLDOWN_VALUE = 0;
+	protected final static int REFUELING_COOLDOWN_VALUE = 20;	
+	protected final static int REFUEL_FLUX = 30;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
 	public final static int ATTACK_TIMING = 150;
@@ -57,6 +58,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int spreadingCooldown;
 	protected int buildingCooldown;
 	protected int moveFailCooldown;
+	protected int refuelingCooldown;
 	protected int nextSpawnType;
 	protected MapLocation currentWaypoint;
 	protected MapLocation lastWaypoint;
@@ -110,7 +112,34 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void displayState() {
-		String stateString = this.getState().toString();		
+		String stateString = "NONE";
+		switch(this.getState()) {
+		case BUILDING:
+			stateString = "BUILDING";
+			break;
+		case EVADING:
+			stateString = "EVADING";
+			break;
+		case FLEEING:
+			stateString = "FLEEING";
+			break;
+		case LOITERING:
+			stateString = "LOITERING";
+			break;
+		case MOVING:
+			stateString = "MOVING";
+			break;
+		case REFUELING:
+			stateString = "REFUELING";
+			break;
+		case SPREADING:
+			stateString = "SPREADING";
+			break;
+		case BUILDUP:
+			stateString = "BUILDUP";
+			break;
+		}
+		
 		this.r.getRc().setIndicatorString(0, stateString);
 	}
 	
@@ -211,6 +240,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			if(go!=null) {
 				System.out.println("Refueled a robot!");
 				this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
+				this.refuelingCooldown = 0;
 			} else {
 				System.out.println("Refuel failed!");
 			}
@@ -368,6 +398,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			return;
 		}
 		
+		if(this.refuelingCooldown == 0) {
+			if(refuelRobotsIfPossible()) {
+				return;
+			}
+		}
+		
 		NavController nav = this.r.getNav();
 		nav.doMove();
 		if(nav.isAtTarget() || moveFailCooldown <= 0) {
@@ -487,6 +523,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected boolean refuelRobotsIfPossible() {
+		this.refuelingCooldown = REFUELING_COOLDOWN_VALUE;
 		RobotController rc = this.r.getRc();
 		StateCache cache = this.r.getCache();
 		RobotInfo[] nearBots = cache.getFriendlyRobots();
@@ -562,6 +599,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(buildingCooldown > 0) {
 			buildingCooldown--;
 		}
+		if(refuelingCooldown > 0) {
+			refuelingCooldown--;
+		}
 		if(moveFailCooldown > 0 && this.getState() == ArchonState.MOVING) {
 			moveFailCooldown--;
 		}
@@ -571,6 +611,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.spreadingCooldown = 0;
 		this.buildingCooldown = 0;
 		this.moveFailCooldown = 0;
+		this.refuelingCooldown = 0;
 	}
 
 	// Stack state stuffs
