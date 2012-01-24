@@ -18,9 +18,9 @@ import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 
-public class SoldierBrain extends RobotBrain implements RadioListener {
+public class ScorcherBrain extends RobotBrain implements RadioListener {
 
-	public enum SoldierState {
+	public enum ScorcherState {
 		HOLD,
 		MOVE,
 		ATTACK,
@@ -31,7 +31,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		WAIT
 	}
 
-	protected SoldierState state;
+	protected ScorcherState state;
 
 	protected final static double PLENTY_OF_FLUX_THRESHOLD = 20.0;
 	protected final static double LOW_FLUX_THRESHOLD = 10.0;
@@ -41,10 +41,10 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	protected int turnsHolding = 0;
 	protected int turnsSinceLastOutOfFluxMessage = 0;
 	
-	public SoldierBrain(BaseRobot r) {
+	public ScorcherBrain(BaseRobot r) {
 		super(r);
 
-		state = SoldierState.WAIT;
+		state = ScorcherState.WAIT;
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
@@ -55,21 +55,21 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	public void think() {
 		// do some global environmental state checks in order of precedence.
 		if(r.getCache().numEnemyRobotsInAttackRange > 0) {
-			this.state = SoldierState.ATTACK;
+			this.state = ScorcherState.ATTACK;
 		} else if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
 			this.r.getRadio().setEnabled(false);
 			this.r.getRadar().setEnabled(false);
-			this.state = SoldierState.OUT_OF_FLUX;
+			this.state = ScorcherState.OUT_OF_FLUX;
 			// turn the radio off, shutdown the radar
-		} else if(this.r.getRc().getFlux() < SoldierBrain.LOW_FLUX_THRESHOLD) {
-			this.state = SoldierState.LOW_FLUX;
+		} else if(this.r.getRc().getFlux() < ScorcherBrain.LOW_FLUX_THRESHOLD) {
+			this.state = ScorcherState.LOW_FLUX;
 		} else if(r.getCache().numRemoteRobots > 0) {
 			
 			// we only get here if we don't see any robots ourselves, but 
 			// OTHER people see robots to attack. But we prefer to transition
 			// into ATTACK if we can.
 			System.out.println("Setting state to SEEK_TARGET");
-			this.state = SoldierState.SEEK_TARGET;
+			this.state = ScorcherState.SEEK_TARGET;
 		}
 
 
@@ -82,7 +82,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			// this is the more serious do nothing command
 			if(Clock.getRoundNum() > ArchonBrain.ATTACK_TIMING) {
 				// Break out just in case we missed a message
-				this.state = SoldierState.HOLD;
+				this.state = ScorcherState.HOLD;
 			}
 			break;
 		case HOLD:
@@ -90,7 +90,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			turnsHolding++;
 			
 			if(turnsHolding > LOST_THRESHOLD) {
-				this.state = SoldierState.LOST;
+				this.state = ScorcherState.LOST;
 			}
 			
 			break;
@@ -99,10 +99,10 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			
 			NavController nav = this.r.getNav();
 			if(nav.isAtTarget()) {
-				System.out.println("Soldier reached target");
+				System.out.println("Scorcher reached target");
 				System.out.println("Target: " + nav.getTarget());
 				System.out.println("Location: " + this.r.getRc().getLocation());
-				this.state = SoldierState.HOLD;
+				this.state = ScorcherState.HOLD;
 			} else {
 				nav.doMove();
 			}
@@ -133,79 +133,63 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				System.out.println("Seeking enemy with no valid targets!");
 				System.out.println("Remote enemies length: " + r.getCache().getRemoteRobots().length);
 				System.out.println("Remote enemies number: " + r.getCache().numRemoteRobots);
-				this.state = SoldierState.HOLD;
+				this.state = ScorcherState.HOLD;
 				break;
 			}
 									// state if there are no enemies
 			
 			// move towards the target
 			this.r.getNav().setTarget(target.location, 0);
-			this.state = SoldierState.MOVE;
+			this.state = ScorcherState.MOVE;
 			nav = this.r.getNav();
-			if(nav.isAtTarget()) this.state = SoldierState.HOLD;
+			if(nav.isAtTarget()) this.state = ScorcherState.HOLD;
 			nav.doMove();
 			
 			break;
 		case ATTACK:
 			
 			if(r.getCache().numEnemyRobotsInAttackRange==0) {
-				this.state = SoldierState.MOVE;
+				this.state = ScorcherState.MOVE;
 			}
 			
 			if(r.getRc().isAttackActive()) {
 				return;
 			}
+			RobotInfo[] enemies = r.getCache().getEnemyRobots();
 			
-			// get target from the radar
-			RobotInfo attackTarget = this.r.getRadar().acquireTarget();
-			
-			// drop out if we don't actually have a target we like
-			if(attackTarget == null) return;
-			
-			RobotLevel level = RobotLevel.ON_GROUND;
-			if(attackTarget.type==RobotType.SCOUT) level = RobotLevel.IN_AIR;
-			
-			try {
-				r.getRc().attackSquare(attackTarget.location, level);
-			} catch (GameActionException e) {
-				e.printStackTrace();
+			// now target selection is really dumb - pick the first one in range
+			for(RobotInfo enemy : enemies) {
+				if(r.getRc().canAttackSquare(enemy.location)) {
+					// skip if it's a tower and there are other baddies around or if
+					// it's a tower not connected to the graph
+					if((enemy.type == RobotType.TOWER && r.getCache().numEnemyAttackRobotsInRange > 0) ||
+							isInvulnerableTower(enemy)) {
+						continue;
+					}
+					RobotLevel l = RobotLevel.ON_GROUND;
+					if(enemy.type == RobotType.SCOUT)
+						l = RobotLevel.IN_AIR;
+ 
+					
+					try {
+						// face the enemy if possible
+						RobotController rc = this.r.getRc();
+						Direction towardsEnemy = rc.getLocation().directionTo(enemy.location);
+						if(rc.getDirection() != towardsEnemy) {
+							if(!rc.isMovementActive()) {
+								rc.setDirection(towardsEnemy);
+							}
+						}
+						// BLAM!
+						r.getRc().attackSquare(enemy.location, l);
+						break;
+					} catch (GameActionException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+				}
 			}
-			
-//			RobotInfo[] enemies = r.getCache().getEnemyRobots();
-//			
-//			// now target selection is really dumb - pick the first one in range
-//			for(RobotInfo enemy : enemies) {
-//				if(r.getRc().canAttackSquare(enemy.location)) {
-//					// skip if it's a tower and there are other baddies around or if
-//					// it's a tower not connected to the graph
-//					if((enemy.type == RobotType.TOWER && r.getCache().numEnemyAttackRobotsInRange > 0) ||
-//							isInvulnerableTower(enemy)) {
-//						continue;
-//					}
-//					RobotLevel l = RobotLevel.ON_GROUND;
-//					if(enemy.type == RobotType.SCOUT)
-//						l = RobotLevel.IN_AIR;
-// 
-//					
-//					try {
-//						// face the enemy if possible
-//						RobotController rc = this.r.getRc();
-//						Direction towardsEnemy = rc.getLocation().directionTo(enemy.location);
-//						if(rc.getDirection() != towardsEnemy) {
-//							if(!rc.isMovementActive()) {
-//								rc.setDirection(towardsEnemy);
-//							}
-//						}
-//						// BLAM!
-//						r.getRc().attackSquare(enemy.location, l);
-//						break;
-//					} catch (GameActionException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-//					
-//				}
-//			}
 			
 			break;
 		case LOST:
@@ -213,15 +197,15 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			System.out.println("Archon loc = " + archonLoc);
 			System.out.println("My loc = " + this.r.getRc().getLocation());
 			this.r.getNav().setTarget(archonLoc, false);
-			this.state = SoldierState.MOVE;
+			this.state = ScorcherState.MOVE;
 			turnsHolding = 0;
 			break;
 		case LOW_FLUX:
 			// if we're in low flux mode, we want to path to our nearest archon
 			// and then ask it for flux.
-			if(this.r.getRc().getFlux() > SoldierBrain.LOW_FLUX_THRESHOLD) {
+			if(this.r.getRc().getFlux() > ScorcherBrain.LOW_FLUX_THRESHOLD) {
 				System.out.println("someone refueled me!");
-				this.state = SoldierState.HOLD;
+				this.state = ScorcherState.HOLD;
 				break;
 			}
 			
@@ -237,9 +221,9 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				this.r.getNav().setTarget(nearestFriendlyArchon, true);
 				// limp towards archon!
 				//this.r.getNav().setTarget(target.location, 0);
-				this.state = SoldierState.MOVE;
+				this.state = ScorcherState.MOVE;
 				nav = this.r.getNav();
-				if(nav.isAtTarget()) this.state = SoldierState.HOLD;
+				if(nav.isAtTarget()) this.state = ScorcherState.HOLD;
 				nav.doMove();				
 			}
 			break;
@@ -250,7 +234,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				// what should we transition into? move?
 				this.r.getRadio().setEnabled(true);
 				this.r.getRadar().setEnabled(true);				
-				this.state = SoldierState.LOST;
+				this.state = ScorcherState.LOST;
 				// turn the radar+radio back on, etc.
 			}
 			
@@ -302,8 +286,8 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			System.out.println("updating move target to: " + mom.moveTo);
 			this.r.getNav().setTarget(mom.moveTo, 3);
 			
-			if(this.state==SoldierState.HOLD || this.state==SoldierState.WAIT) {
-				this.state = SoldierState.MOVE;
+			if(this.state==ScorcherState.HOLD || this.state==ScorcherState.WAIT) {
+				this.state = ScorcherState.MOVE;
 			}
 		} else if (msg.msg.getType()==LowFluxMessage.type) {
 			
