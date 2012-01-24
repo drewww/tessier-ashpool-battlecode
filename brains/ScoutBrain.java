@@ -49,7 +49,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
-		r.getRadio().addListener(this, RobotInfosMessage.type);
+		r.getRadar().setEnemyTargetBroadcast(true);
 	}
 
 	@Override
@@ -74,6 +74,23 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 		}
 
 
+		// no matter our state, check and see if we should heal
+		int unitsToHeal = 0;
+		for(RobotInfo friendly : r.getCache().getFriendlyRobots()) {
+			if(!friendly.regen && friendly.energon != friendly.type.maxEnergon) {
+				unitsToHeal++;
+			}
+		}
+		
+		if(unitsToHeal >=2 && this.state != ScoutState.LOW_FLUX && this.state != ScoutState.OUT_OF_FLUX) {
+			try {
+				this.r.getRc().regenerate();
+			} catch (GameActionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		System.out.println("state: " + this.state);
 		
 		this.displayState();
