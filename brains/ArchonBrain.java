@@ -110,34 +110,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void displayState() {
-		String stateString = "NONE";
-		switch(this.getState()) {
-		case BUILDING:
-			stateString = "BUILDING";
-			break;
-		case EVADING:
-			stateString = "EVADING";
-			break;
-		case FLEEING:
-			stateString = "FLEEING";
-			break;
-		case LOITERING:
-			stateString = "LOITERING";
-			break;
-		case MOVING:
-			stateString = "MOVING";
-			break;
-		case REFUELING:
-			stateString = "REFUELING";
-			break;
-		case SPREADING:
-			stateString = "SPREADING";
-			break;
-		case BUILDUP:
-			stateString = "BUILDUP";
-			break;
-		}
-		
+		String stateString = this.getState().toString();		
 		this.r.getRc().setIndicatorString(0, stateString);
 	}
 	
