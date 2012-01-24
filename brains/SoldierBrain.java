@@ -37,14 +37,17 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	protected final static double LOW_FLUX_THRESHOLD = 10.0;
 	protected final static double OUT_OF_FLUX_THRESHOLD = 5.0;
 	protected final static double LOST_THRESHOLD = 10;
+
+	private static final int SEEK_TARGET_COOLDOWN = 3;
 	
 	protected int turnsHolding = 0;
 	protected int turnsSinceLastOutOfFluxMessage = 0;
+	protected int turnsSinceSeekingTarget = 0;
 	
 	public SoldierBrain(BaseRobot r) {
 		super(r);
 
-		state = SoldierState.WAIT;
+		this.state = SoldierState.WAIT;
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
@@ -64,12 +67,16 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		} else if(this.r.getRc().getFlux() < SoldierBrain.LOW_FLUX_THRESHOLD) {
 			this.state = SoldierState.LOW_FLUX;
 		} else if(r.getCache().numRemoteRobots > 0) {
+			if(turnsSinceSeekingTarget > 0) {
+				turnsSinceSeekingTarget--;
+			} else {
+				// we only get here if we don't see any robots ourselves, but 
+				// OTHER people see robots to attack. But we prefer to transition
+				// into ATTACK if we can.
+				this.state = SoldierState.SEEK_TARGET;
+				turnsSinceSeekingTarget = SEEK_TARGET_COOLDOWN;
+			}
 			
-			// we only get here if we don't see any robots ourselves, but 
-			// OTHER people see robots to attack. But we prefer to transition
-			// into ATTACK if we can.
-			System.out.println("Setting state to SEEK_TARGET");
-			this.state = SoldierState.SEEK_TARGET;
 		}
 
 
@@ -229,30 +236,8 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 	}
 
 	protected void displayState() {
-		String stateString = "NONE";
-		switch(this.state) {
-		case ATTACK:
-			stateString = "ATTACK";
-			break;
-		case HOLD:
-			stateString = "HOLD";
-			break;
-		case LOST:
-			stateString = "LOST";
-			break;
-		case LOW_FLUX:
-			stateString = "LOW_FLUX";
-			break;
-		case MOVE:
-			stateString = "MOVE";
-			break;
-		case OUT_OF_FLUX:
-			stateString = "OUT_OF_FLUX";
-			break;
-		case SEEK_TARGET:
-			stateString = "SEEK_TARGET";
-			break;
-		}
+		String stateString = this.state.toString();
+		
 		this.r.getRc().setIndicatorString(0, stateString);
 	}
 	
