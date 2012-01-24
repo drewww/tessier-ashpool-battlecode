@@ -76,7 +76,11 @@ public class RadarController {
 			
 			switch(r.getRc().getType()) {
 			case SCOUT:
-			case DISRUPTER:				
+				score = this.calculateScoreScout(potentialTarget);
+				break;
+			case DISRUPTER:			
+				score = this.calculateScoreDisrupter(potentialTarget);
+				break;
 			case SOLDIER:
 				score = this.calculateScoreSoldier(potentialTarget);
 				break;
@@ -97,6 +101,69 @@ public class RadarController {
 		}
 		
 		return potentialTargets[curMaxIndex];
+	}
+	
+	protected double calculateScoreScout(RobotInfo potentialTarget) {
+		// scouts prefer archons above all, and then 
+		// targets with >0 flux, but low flux.
+		double score = 0;
+		if(potentialTarget.flux < 0.5) return score;
+
+		switch(potentialTarget.type) {
+		case ARCHON:
+			score += 1000;
+			break;
+		case SCORCHER:
+			score += 300;
+			break;
+		case SOLDIER:
+		case DISRUPTER:
+		case SCOUT:
+			score+= 100;
+			break;
+		case TOWER:
+			score=0;
+			break;
+		}
+		
+		
+		// now add a bonus for low flux 
+		score += 3*(potentialTarget.type.maxFlux - potentialTarget.flux);
+		
+		// add a bonus for high energon
+		score += potentialTarget.energon;
+		
+		return score;
+	}
+	
+	protected double calculateScoreDisrupter(RobotInfo potentialTarget) {
+		double score = 0;
+		if(potentialTarget.flux < 0.5) return score;
+
+		switch(potentialTarget.type) {
+		case SCORCHER:
+			score += 100;
+			break;
+		case SOLDIER:
+			score += 50;
+			break;
+		case DISRUPTER:
+		case SCOUT:
+			score+= 100;
+			break;
+		case ARCHON:
+		case TOWER:
+			score=-1000;
+			break;
+		}
+		
+		// add a random bonus. This helps disrupters spread their fire when
+		// they have multiple targets.
+		// (randomness is unreliable atm, so we'll just assume that there's
+		// some randomness inherent in the order in which we traverse the list
+		// and we're returning the first one to break ties)
+		
+		return score;
 	}
 	
 	protected double calculateScoreSoldier(RobotInfo potentialTarget) {
