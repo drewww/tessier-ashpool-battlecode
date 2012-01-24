@@ -31,6 +31,7 @@ public class StateCache {
 	protected RobotInfo[] friendlyRobots;
 	protected RobotInfo[] enemyRobots;
 	protected SRobotInfo[] remoteRobots;
+	protected RobotInfo[] enemyRobotsInAttackRange;
 	
 	public int numRobotsInRange;
 	public int numFriendlyRobotsInRange;
@@ -59,6 +60,7 @@ public class StateCache {
 		friendlyRobots = new RobotInfo[MAX_ROBOTS];
 		enemyRobots = new RobotInfo[MAX_ROBOTS];
 		remoteRobots = new SRobotInfo[MAX_ROBOTS];
+		enemyRobotsInAttackRange = new RobotInfo[MAX_ROBOTS];
 
 		friendlyArchonLocs = null;
 	}
@@ -75,25 +77,25 @@ public class StateCache {
 	}
 
 	
-	public void addRobot(RobotInfo r) {
-		this.robots[numRobotsInRange] = r;
+	public void addRobot(RobotInfo newRobot) {
+		this.robots[numRobotsInRange] = newRobot;
 
 		numRobotsInRange++;
 
 
-		if(r.team==this.r.getRc().getTeam()) {
-			this.friendlyRobots[numFriendlyRobotsInRange] = r;
+		if(newRobot.team==this.r.getRc().getTeam()) {
+			this.friendlyRobots[numFriendlyRobotsInRange] = newRobot;
 			numFriendlyRobotsInRange++;
 		} else {
-			this.enemyRobots[numEnemyRobotsInRange] = r;
+			this.enemyRobots[numEnemyRobotsInRange] = newRobot;
 			numEnemyRobotsInRange++;
-			if(r.location.distanceSquaredTo(this.r.getRc().getLocation()) <=
-				 this.r.getRc().getType().attackRadiusMaxSquared &&
-				 !isInvulnerableTower(r)) {
+			if(this.r.getRc().canAttackSquare(newRobot.location) &&
+				 !isInvulnerableTower(newRobot)) {
+				this.enemyRobotsInAttackRange[numEnemyRobotsInAttackRange] = newRobot;
 				numEnemyRobotsInAttackRange++;
 			}
-			if(r.type != RobotType.TOWER &&
-				 r.type != RobotType.ARCHON) {
+			if(newRobot.type != RobotType.TOWER &&
+				 newRobot.type != RobotType.ARCHON) {
 				numEnemyAttackRobotsInRange++;
 			}
 		}
@@ -110,6 +112,14 @@ public class StateCache {
 		RobotInfo[] out = new RobotInfo[numFriendlyRobotsInRange];
 		System.arraycopy(this.friendlyRobots, 0, out, 0, numFriendlyRobotsInRange);
 
+		return out;
+	}
+
+	public RobotInfo[] getEnemyRobotsInAttackRange() {
+		RobotInfo[] out = new RobotInfo[numEnemyRobotsInAttackRange];
+		
+		System.arraycopy(this.enemyRobotsInAttackRange, 0, out, 0, numEnemyRobotsInAttackRange);
+		
 		return out;
 	}
 

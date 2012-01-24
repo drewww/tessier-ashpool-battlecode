@@ -146,41 +146,57 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			if(r.getRc().isAttackActive()) {
 				return;
 			}
-			RobotInfo[] enemies = r.getCache().getEnemyRobots();
 			
-			// now target selection is really dumb - pick the first one in range
-			for(RobotInfo enemy : enemies) {
-				if(r.getRc().canAttackSquare(enemy.location)) {
-					// skip if it's a tower and there are other baddies around or if
-					// it's a tower not connected to the graph
-					if((enemy.type == RobotType.TOWER && r.getCache().numEnemyAttackRobotsInRange > 0) ||
-							isInvulnerableTower(enemy)) {
-						continue;
-					}
-					RobotLevel l = RobotLevel.ON_GROUND;
-					if(enemy.type == RobotType.SCOUT)
-						l = RobotLevel.IN_AIR;
- 
-					
-					try {
-						// face the enemy if possible
-						RobotController rc = this.r.getRc();
-						Direction towardsEnemy = rc.getLocation().directionTo(enemy.location);
-						if(rc.getDirection() != towardsEnemy) {
-							if(!rc.isMovementActive()) {
-								rc.setDirection(towardsEnemy);
-							}
-						}
-						// BLAM!
-						r.getRc().attackSquare(enemy.location, l);
-						break;
-					} catch (GameActionException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					
-				}
+			// get target from the radar
+			RobotInfo attackTarget = this.r.getRadar().acquireTarget();
+			
+			// drop out if we don't actually have a target we like
+			if(attackTarget == null) return;
+			
+			RobotLevel level = RobotLevel.ON_GROUND;
+			if(attackTarget.type==RobotType.SCOUT) level = RobotLevel.IN_AIR;
+			
+			try {
+				r.getRc().attackSquare(attackTarget.location, level);
+			} catch (GameActionException e) {
+				e.printStackTrace();
 			}
+			
+//			RobotInfo[] enemies = r.getCache().getEnemyRobots();
+//			
+//			// now target selection is really dumb - pick the first one in range
+//			for(RobotInfo enemy : enemies) {
+//				if(r.getRc().canAttackSquare(enemy.location)) {
+//					// skip if it's a tower and there are other baddies around or if
+//					// it's a tower not connected to the graph
+//					if((enemy.type == RobotType.TOWER && r.getCache().numEnemyAttackRobotsInRange > 0) ||
+//							isInvulnerableTower(enemy)) {
+//						continue;
+//					}
+//					RobotLevel l = RobotLevel.ON_GROUND;
+//					if(enemy.type == RobotType.SCOUT)
+//						l = RobotLevel.IN_AIR;
+// 
+//					
+//					try {
+//						// face the enemy if possible
+//						RobotController rc = this.r.getRc();
+//						Direction towardsEnemy = rc.getLocation().directionTo(enemy.location);
+//						if(rc.getDirection() != towardsEnemy) {
+//							if(!rc.isMovementActive()) {
+//								rc.setDirection(towardsEnemy);
+//							}
+//						}
+//						// BLAM!
+//						r.getRc().attackSquare(enemy.location, l);
+//						break;
+//					} catch (GameActionException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//					
+//				}
+//			}
 			
 			break;
 		case LOST:
