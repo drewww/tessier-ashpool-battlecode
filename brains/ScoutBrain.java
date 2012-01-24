@@ -45,7 +45,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	public ScoutBrain(BaseRobot r) {
 		super(r);
 
-		state = ScoutState.WAIT;
+		state = ScoutState.MOVE;
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
@@ -117,10 +117,24 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			
 			NavController nav = this.r.getNav();
 			if(nav.isAtTarget()) {
-				System.out.println("Scout reached target");
-				System.out.println("Target: " + nav.getTarget());
-				System.out.println("Location: " + this.r.getRc().getLocation());
-				this.state = ScoutState.HOLD;
+				// recalculate the centroid as the new move target
+				RobotInfo[] friendlies = r.getCache().getFriendlyRobots();
+				MapLocation centroid = new MapLocation(0,0);
+				int soldiers = 0;
+		    for(RobotInfo friend: friendlies) {
+		    	if(friend.type!=RobotType.SOLDIER) {
+		    		continue;
+		    	}
+		    	soldiers++;
+		    	MapLocation friendLoc = friend.location; 
+		    	centroid = centroid.add(friendLoc.x, friendLoc.y);
+		    }
+		    if(soldiers==0) {
+		    	this.state = ScoutState.LOST;
+		    } else {
+		    	centroid = new MapLocation(centroid.x / soldiers, centroid.y / soldiers);
+		    }
+		    nav.setTarget(centroid);
 			} else {
 				nav.doMove();
 			}
