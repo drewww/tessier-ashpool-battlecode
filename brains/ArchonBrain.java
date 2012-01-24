@@ -32,13 +32,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_FLUX = 20;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
-	public final static int ATTACK_TIMING = 350;
+	public final static int ATTACK_TIMING = 150;
 	//protected final static RobotType SPAWN_TYPE = RobotType.DISRUPTER;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 	
-	protected final static RobotType[] SPAWN_LIST = {RobotType.SOLDIER, RobotType.SOLDIER,
-																			RobotType.DISRUPTER, RobotType.SOLDIER,}; 
+	protected final static RobotType[] SPAWN_LIST = {RobotType.SOLDIER, RobotType.SCOUT,
+																			RobotType.SOLDIER, RobotType.SOLDIER,}; 
 	
 	protected enum ArchonState {
 		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
@@ -57,7 +57,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int spreadingCooldown;
 	protected int buildingCooldown;
 	protected int moveFailCooldown;
-	private int nextSpawnType;
+	protected int nextSpawnType;
+	protected MapLocation currentWaypoint;
+	protected MapLocation lastWaypoint;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -70,6 +72,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.initStateStack();
 		this.pushState(ArchonState.BUILDUP);
 		this.nextSpawnType = 0;
+		this.lastWaypoint = null;
+		this.currentWaypoint = null;
 	}
 
 	
@@ -138,16 +142,16 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void buildup() {
-    if(this.isNearArchons() && spreadingCooldown == 0) {
-    	System.out.println("Archon loitering->spreading");
-    	this.pushState(ArchonState.SPREADING);
-    	spread();
-    	return;
-    }
-    	
     if(Clock.getRoundNum() > ATTACK_TIMING) {
     	System.out.println("Triggering attack!");
     	this.popState();
+    	return;
+    }
+    
+		if(this.isNearArchons() && spreadingCooldown == 0) {
+    	System.out.println("Archon loitering->spreading");
+    	this.pushState(ArchonState.SPREADING);
+    	spread();
     	return;
     }
     
@@ -266,9 +270,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     }
     
     // If we can sense a place to build a tower, grab it
-    MapLocation nearNodeLoc = getRandomCapturableNode();
+    MapLocation nodeLoc = getRandomCapturableNode();
 
-    this.r.getNav().setTarget(nearNodeLoc, true);
+    this.r.getNav().setTarget(nodeLoc, true);
     this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
     
     this.pushState(ArchonState.MOVING);
