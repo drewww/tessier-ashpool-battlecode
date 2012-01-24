@@ -62,7 +62,7 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 				spawnedLastTurn = true;
 			} catch (GameActionException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				r.getLog().printStackTrace(e);
 			}
 		}
 		
@@ -73,7 +73,7 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 			}
 		} catch (GameActionException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			r.getLog().printStackTrace(e);
 		}
 		
 		MapLocation l = this.r.getRc().getLocation().add(-20, -60);
@@ -82,6 +82,6 @@ public class DrewTestBrain extends RobotBrain implements RadioListener {
 
 	@Override
 	public void handleMessage(MessageWrapper msg) {
-		System.out.println("Received message: " + msg);
+		r.getLog().println("Received message: " + msg);
 	}
 }

@@ -52,12 +52,12 @@ public class RadioController {
 	public void addListener(RadioListener listener, String[] messageClasses) {
 		Vector<RadioListener> listenersForClass;
 
-		System.out.println("adding listener: " + listener + " for classes: " + messageClasses);
+		r.getLog().println("adding listener: " + listener + " for classes: " + messageClasses);
 
 		for(String c : messageClasses) {
 			if(c==null) break;
 
-			System.out.println("adding listener for class: " + c);
+			r.getLog().println("adding listener for class: " + c);
 			if(listeners.get(c)==null) {
 				listenersForClass = new Vector<RadioListener>();
 			} else {
@@ -110,10 +110,10 @@ public class RadioController {
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			r.getLog().printStackTrace(e);
 		} catch (GameActionException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			r.getLog().printStackTrace(e);
 		}
 
 		// clean out the queue
@@ -158,10 +158,10 @@ public class RadioController {
 
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				r.getLog().printStackTrace(e);
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				r.getLog().printStackTrace(e);
 			}
 		}
 	}

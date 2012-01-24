@@ -1,6 +1,7 @@
 package team035.robots;
 
 import team035.brains.DisrupterBrain;
+import team035.modules.Log;
 import team035.modules.NavController;
 import team035.modules.RadarController;
 import team035.modules.RadioController;
@@ -16,7 +17,7 @@ public class DisrupterRobot extends BaseRobot {
 		this.radio = new RadioController(this);
 		this.cache = new StateCache(this);
 		this.nav = new NavController(this);
-		
+		this.log = new Log(this);
 		this.brain = new DisrupterBrain(this);
 
 	}

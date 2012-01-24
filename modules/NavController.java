@@ -138,6 +138,7 @@ public class NavController {
 						return moved;
 					}
 				} catch(GameActionException e) {
+					r.getLog().printStackTrace(e);
 					moved = false;
 				}
 			}
@@ -160,7 +161,7 @@ public class NavController {
 			return true;
 		}
 		if(distance <= this.epsilon*this.epsilon) {
-			System.out.println("Within epsilon. Count: " + withinEpsilon);
+			r.getLog().println("Within epsilon. Count: " + withinEpsilon);
 			withinEpsilon++;
 
 			if(withinEpsilon >= WITHIN_EPSILON_THRESHOLD) {
@@ -209,7 +210,7 @@ public class NavController {
 			}
 		} catch (GameActionException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			r.getLog().printStackTrace(e);
 		}
 		return false;
 	}

@@ -45,7 +45,7 @@ public class RadarController {
 				this.cache.addRobot(info);
 			} catch (GameActionException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
+				r.getLog().printStackTrace(e);
 			}
 		}
 
@@ -59,7 +59,7 @@ public class RadarController {
 	// weapons. This depends on the unit type - they each have different targetting
 	// priorities.
 	public RobotInfo acquireTarget() {
-		System.out.println("acquiring target!");
+		r.getLog().println("acquiring target!");
 		// first, get a list of targets in our attack range.
 		RobotInfo[] potentialTargets = r.getCache().getEnemyRobotsInAttackRange();
 //		double[] targetScores = new double[potentialTargets.length];
@@ -200,7 +200,7 @@ public class RadarController {
 		
 		score += potentialTarget.flux;
 		
-		System.out.println("score: " + score);
+		r.getLog().println("score: " + score);
 		return score;
 	}
 }

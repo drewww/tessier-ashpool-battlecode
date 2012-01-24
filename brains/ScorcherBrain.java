@@ -68,12 +68,12 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			// we only get here if we don't see any robots ourselves, but 
 			// OTHER people see robots to attack. But we prefer to transition
 			// into ATTACK if we can.
-			System.out.println("Setting state to SEEK_TARGET");
+			r.getLog().println("Setting state to SEEK_TARGET");
 			this.state = ScorcherState.SEEK_TARGET;
 		}
 
 
-		System.out.println("state: " + this.state);
+		r.getLog().println("state: " + this.state);
 		
 		this.displayState();
 
@@ -99,9 +99,9 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			
 			NavController nav = this.r.getNav();
 			if(nav.isAtTarget()) {
-				System.out.println("Scorcher reached target");
-				System.out.println("Target: " + nav.getTarget());
-				System.out.println("Location: " + this.r.getRc().getLocation());
+				r.getLog().println("Scorcher reached target");
+				r.getLog().println("Target: " + nav.getTarget());
+				r.getLog().println("Location: " + this.r.getRc().getLocation());
 				this.state = ScorcherState.HOLD;
 			} else {
 				nav.doMove();
@@ -130,9 +130,9 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			
 			if(target==null) {
 				// this shouldn't happen - we won't be in this
-				System.out.println("Seeking enemy with no valid targets!");
-				System.out.println("Remote enemies length: " + r.getCache().getRemoteRobots().length);
-				System.out.println("Remote enemies number: " + r.getCache().numRemoteRobots);
+				r.getLog().println("Seeking enemy with no valid targets!");
+				r.getLog().println("Remote enemies length: " + r.getCache().getRemoteRobots().length);
+				r.getLog().println("Remote enemies number: " + r.getCache().numRemoteRobots);
 				this.state = ScorcherState.HOLD;
 				break;
 			}
@@ -185,7 +185,7 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 						break;
 					} catch (GameActionException e) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						r.getLog().printStackTrace(e);
 					}
 					
 				}
@@ -194,8 +194,8 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			break;
 		case LOST:
 			MapLocation archonLoc = this.r.getRc().senseAlliedArchons()[0];
-			System.out.println("Archon loc = " + archonLoc);
-			System.out.println("My loc = " + this.r.getRc().getLocation());
+			r.getLog().println("Archon loc = " + archonLoc);
+			r.getLog().println("My loc = " + this.r.getRc().getLocation());
 			this.r.getNav().setTarget(archonLoc, false);
 			this.state = ScorcherState.MOVE;
 			turnsHolding = 0;
@@ -204,7 +204,7 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			// if we're in low flux mode, we want to path to our nearest archon
 			// and then ask it for flux.
 			if(this.r.getRc().getFlux() > ScorcherBrain.LOW_FLUX_THRESHOLD) {
-				System.out.println("someone refueled me!");
+				r.getLog().println("someone refueled me!");
 				this.state = ScorcherState.HOLD;
 				break;
 			}
@@ -212,11 +212,11 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			MapLocation nearestFriendlyArchon = this.r.getCache().getNearestFriendlyArchon();
 			
 			if(this.r.getRc().getLocation().distanceSquaredTo(nearestFriendlyArchon)<=2) {
-				System.out.println("there's an archon nearby that can refuel me!");
+				r.getLog().println("there's an archon nearby that can refuel me!");
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.ROBOT_TYPE, RobotType.ARCHON), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));				
 			} else {
 				
-				System.out.println("in low flux mode, moving to " + nearestFriendlyArchon);
+				r.getLog().println("in low flux mode, moving to " + nearestFriendlyArchon);
 
 				this.r.getNav().setTarget(nearestFriendlyArchon, true);
 				// limp towards archon!
@@ -283,7 +283,7 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.
 
-			System.out.println("updating move target to: " + mom.moveTo);
+			r.getLog().println("updating move target to: " + mom.moveTo);
 			this.r.getNav().setTarget(mom.moveTo, 3);
 			
 			if(this.state==ScorcherState.HOLD || this.state==ScorcherState.WAIT) {

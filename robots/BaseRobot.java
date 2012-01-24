@@ -1,6 +1,7 @@
 package team035.robots;
 
 import team035.brains.RobotBrain;
+import team035.modules.Log;
 import team035.modules.NavController;
 import team035.modules.RadarController;
 import team035.modules.RadioController;
@@ -15,6 +16,7 @@ public abstract class BaseRobot {
 	protected StateCache cache;
 	protected RadioController radio; 
 	protected RadarController radar;
+	protected Log log;
 	
 	public static BaseRobot robot;
 
@@ -33,7 +35,7 @@ public abstract class BaseRobot {
 			try {
 				brain.think();
 			} catch (Exception e) {
-				e.printStackTrace();
+				log.printStackTrace(e);
 			}
 
 			this.yield();
@@ -47,7 +49,7 @@ public abstract class BaseRobot {
 			this.radio.receive();
 		} catch (Exception e) {
 			// This is bad! It'll short circuit an entire turn startup.
-			e.printStackTrace();
+			log.printStackTrace(e);
 		}
 	}
 
@@ -59,7 +61,7 @@ public abstract class BaseRobot {
 		try {
 			this.endTurn();
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.printStackTrace(e);
 		}
 
 		this.rc.yield(); 
@@ -67,7 +69,7 @@ public abstract class BaseRobot {
 		try {
 			this.startTurn();
 		} catch (Exception e) {
-			e.printStackTrace();
+			log.printStackTrace(e);
 		}
 	}
 	
@@ -98,5 +100,9 @@ public abstract class BaseRobot {
 
 	public RadarController getRadar() {
 		return radar;
+	}
+	
+	public Log getLog() {
+		return log;
 	}
 }

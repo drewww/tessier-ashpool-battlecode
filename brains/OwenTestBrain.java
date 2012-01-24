@@ -14,11 +14,11 @@ public class OwenTestBrain extends RobotBrain {
 
 	@Override
 	public void think() {
-		System.out.println("At: " + this.r.getRc().getLocation());
+		r.getLog().println("At: " + this.r.getRc().getLocation());
 		NavController nav = this.r.getNav();
 		boolean moved = nav.doMove();
 		if(nav.isAtTarget()) {
-			System.out.println("Reached target!");
+			r.getLog().println("Reached target!");
 		}
 	}
 
