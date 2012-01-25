@@ -33,6 +33,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_FLUX = 30;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
+	protected final static int TOO_MANY_FRIENDLIES = 5;
 	public final static int ATTACK_TIMING = 160;
 	//protected final static RobotType SPAWN_TYPE = RobotType.DISRUPTER;
 	protected ArchonState[] stateStack;
@@ -82,7 +83,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.lastWaypoint = null;
 		this.currentWaypoint = null;
 		this.refuelOnStack = false;
-		rng = new Random(this.r.getRc().getRobot().getID());
+		rng = new Random(this.r.getRc().getRobot().getID()+1);
 	}
 
 	
@@ -208,7 +209,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 				closestDistance = distance;
 			}
 		}
-
 		this.moveAwayFrom(closestLoc);
 		return;
 
@@ -387,11 +387,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 					}
 				} else {
 					// this either means we built it or someone messed with us
+					this.buildingCooldown = BUILDING_COOLDOWN_VALUE;
 					this.popState();
 					r.getLog().println("Archon building->loitering");
 					return;
 				}
 			} else {
+				this.buildingCooldown = BUILDING_COOLDOWN_VALUE;
 				this.popState();
 			}
 		} catch (GameActionException e) {
@@ -400,8 +402,17 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void move() {
-		if(spawnRobotIfPossible()) {
-			return;
+		if(r.getRc().getFlux() > r.getRc().getType().maxFlux - 1) {
+			if(spawnRobotIfPossible()) {
+				return;
+			}
+		} else {
+			if(r.getCache().numFriendlyRobotsInRange < TOO_MANY_FRIENDLIES) {
+				if(spawnRobotIfPossible()) {
+					return;
+				}
+				
+			}
 		}
 		
 		if(!this.refuelOnStack) {
