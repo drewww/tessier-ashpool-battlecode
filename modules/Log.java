@@ -34,7 +34,7 @@ public class Log {
     throwable.printStackTrace(printWriter);
     String message = result.toString();
     System.out.println(message);
-    if(recording) {
+    if(true) {
     	robot.getRc().addMatchObservation(message);
     }
 	}

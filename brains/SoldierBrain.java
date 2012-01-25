@@ -80,7 +80,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		}
 
 
-		r.getLog().println("state: " + this.state);
+		//r.getLog().println("state: " + this.state);
 		
 		this.displayState();
 		this.shareFlux();
@@ -204,7 +204,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.ROBOT_TYPE, RobotType.ARCHON), new LowFluxMessage(this.r.getRc().getRobot(), this.r.getRc().getLocation(), RobotLevel.ON_GROUND));				
 			} else {
 				
-				r.getLog().println("in low flux mode, moving to " + nearestFriendlyArchon);
+//				r.getLog().println("in low flux mode, moving to " + nearestFriendlyArchon);
 
 				this.r.getNav().setTarget(nearestFriendlyArchon, true);
 				// limp towards archon!
@@ -249,7 +249,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.
 
-			r.getLog().println("updating move target to: " + mom.moveTo);
+//			r.getLog().println("updating move target to: " + mom.moveTo);
 			this.r.getNav().setTarget(mom.moveTo, 3);
 			
 			if(this.state==SoldierState.HOLD || this.state==SoldierState.WAIT) {
@@ -298,7 +298,7 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 					}
 					try {
 						rc.transferFlux(robot.location, level, fluxDifference / 2.0);
-						r.getLog().println("Transfered flux!");
+//						r.getLog().println("Transfered flux!");
 					} catch (GameActionException e) {
 						// TODO Auto-generated catch block
 						r.getLog().printStackTrace(e);

@@ -33,7 +33,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_FLUX = 30;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
-	public final static int ATTACK_TIMING = 150;
+	public final static int ATTACK_TIMING = 160;
 	//protected final static RobotType SPAWN_TYPE = RobotType.DISRUPTER;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
@@ -66,6 +66,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected MapLocation currentWaypoint;
 	protected MapLocation lastWaypoint;
 	protected boolean refuelOnStack;
+	protected Random rng;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -81,6 +82,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.lastWaypoint = null;
 		this.currentWaypoint = null;
 		this.refuelOnStack = false;
+		rng = new Random(this.r.getRc().getRobot().getID());
 	}
 
 	
@@ -206,39 +208,10 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 				closestDistance = distance;
 			}
 		}
-    if(!rc.isMovementActive()) {
-    	try {
-	    	Direction enemyHeading = rc.getLocation().directionTo(closestLoc);
-	    	if(enemyHeading != Direction.NONE && enemyHeading != Direction.OMNI) {
-	    		
-	    		Direction bestDir = Direction.NONE;
-	    		double bestDistance = myLoc.distanceSquaredTo(closestLoc);
-	    		for(Direction tryDir : Direction.values()){
-	    			if(tryDir == Direction.OMNI ||
-	    				 tryDir == Direction.NONE ||
-	    					!rc.canMove(tryDir)) {
-	    				continue;
-	    			}
-	    			MapLocation tryLoc = myLoc.add(tryDir);
-	    			double tryDistance = tryLoc.distanceSquaredTo(closestLoc);
-	    			if(tryDistance > bestDistance) {
-	    				bestDir = tryDir;
-	    				bestDistance = tryDistance;
-	    			}
-	    		} 
-	    		if(bestDir != Direction.NONE) {
-		    		if(rc.getDirection() != bestDir.opposite()) {
-		    			rc.setDirection(bestDir.opposite());
-		    			return;
-		    		}
-		    		rc.moveBackward();
-		    		return;
-	    		}
-	    	}
-    	} catch (GameActionException e) {
-    		r.getLog().printStackTrace(e);    		
-    	}
-    }
+
+		this.moveAwayFrom(closestLoc);
+		return;
+
 	}
 
 
@@ -248,13 +221,13 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			boolean noThreats = true;
 			for(RobotInfo enemy : r.getCache().getEnemyAttackRobotsInRange()) {
 				if(enemy.flux > 0.5) {
-					r.getLog().println("Found a threatening enemy");
+//					r.getLog().println("Found a threatening enemy");
 					noThreats = false;
 					break;
 				}
 			}
 			if(noThreats) {
-				r.getLog().println("Found no threatening enemies");
+//				r.getLog().println("Found no threatening enemies");
 			}
 			
 			if(noThreats == false) {
@@ -276,17 +249,29 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		GameObject go;
 		try {
 			//go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
-			go = this.r.getRc().senseObjectAtLocation(fluxTransferLoc, fluxTransferLevel);
-			if(go!=null) {
-				r.getLog().println("Refueled a robot!");
-				this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);
-				
+			if(this.r.getRc().canSenseSquare(fluxTransferLoc)) {
+				go = this.r.getRc().senseObjectAtLocation(fluxTransferLoc, fluxTransferLevel);
+				if(go!=null) {
+					r.getLog().println("Refueled a robot!");
+					double myFlux = r.getRc().getFlux();
+					
+					if(myFlux >= fluxTransferAmount) {
+						this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, fluxTransferAmount);	
+					} else {
+						this.r.getRc().transferFlux(fluxTransferLoc, fluxTransferLevel, myFlux);
+					}
+					
+					
+				} else {
+					r.getLog().println("Refuel failed!");
+				}
 			} else {
 				r.getLog().println("Refuel failed!");
 			}
-		} catch (GameActionException e) {
+		}catch (GameActionException e) {
 			// TODO Auto-generated catch block
 			r.getLog().printStackTrace(e);
+			r.getLog().println("Refuel failed!");
 		}
 		this.popState();
 		this.refuelOnStack = false;
@@ -313,8 +298,16 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     	return;
     }
     
-    // If we can sense a place to build a tower, grab it
-    MapLocation nodeLoc = getRandomCapturableNode();
+    MapLocation nodeLoc;
+    // Preferentially capture nodes that make us vulnerable
+    MapLocation[] vulnerableHomeLocs = getOpenPowerCoreNeighbors();
+    if(vulnerableHomeLocs.length != 0) {
+     r.getLog().println("Home locs vulnerable!");
+     nodeLoc = vulnerableHomeLocs[rng.nextInt(vulnerableHomeLocs.length)];
+    } else {
+    	// get a random node
+	    nodeLoc = getRandomCapturableNode();
+    }
 
     this.r.getNav().setTarget(nodeLoc, true);
     this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
@@ -351,35 +344,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		    if(towardsCentroid == Direction.OMNI || towardsCentroid == Direction.NONE) {
 		    	spreadBlocked = true;
 		    } else {
-			    try {
-				    if(rc.getDirection() != awayFromCentroid &&
-				    	 rc.getDirection() != towardsCentroid) {
-				    	rc.setDirection(awayFromCentroid);
-				    	return;
-				    }
-				    
-				    // if we're facing a good direction do move!
-				    if(rc.getDirection() == awayFromCentroid) {
-				    	if(rc.canMove(awayFromCentroid)) {
-				    		rc.moveForward();
-				    		return;
-				    	} else {
-				    		spreadBlocked = true;
-				    	}
-				    } 
-				    
-				    if(rc.getDirection() == towardsCentroid) {
-				    	if(rc.canMove(awayFromCentroid)) {
-					    	rc.moveBackward();
-					    	return;
-				    	} else {
-				    		spreadBlocked = true;
-				    	}
-				    }
-			    } catch (GameActionException e) {
-			    	r.getLog().printStackTrace(e);
-			    	spreadBlocked = true;
-			    }
+		    	spreadBlocked = !this.moveAwayFrom(centroid);
 		    }
 	    }
 
@@ -470,9 +435,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected boolean spawnRobotIfPossible() {
-		if(this.refuelOnStack) {
-			return false;
-		}
+//		if(this.refuelOnStack) {
+//			return false;
+//		}
 		RobotType type = this.getTypeToSpawn();
 		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > type.spawnCost + REFUEL_FLUX) {
 			if(canSpawn()){
@@ -634,7 +599,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		StateCache cache = r.getCache();		
 		RobotController rc = r.getRc();
 		MapLocation[] capturableNodes = cache.senseCapturablePowerNodes();
-		Random rng = new Random(this.r.getRc().getRobot().getID());
 		return capturableNodes[rng.nextInt(capturableNodes.length)];
 	}
 	
@@ -766,7 +730,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 					}
 					try {
 						rc.transferFlux(robot.location, level, REFUEL_FLUX);
-						r.getLog().println("Transfered flux!");
+//						r.getLog().println("Transfered flux!");
 					} catch (GameActionException e) {
 						// TODO Auto-generated catch block
 						r.getLog().printStackTrace(e);
@@ -774,6 +738,66 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 				}
 			}
 		}
+	}
+	
+	protected boolean moveAwayFrom(MapLocation avoidLoc) {
+		RobotController rc = r.getRc();
+		if(!rc.isMovementActive()) {
+			MapLocation myLoc = rc.getLocation();
+	  	try {
+	
+	    	Direction avoidHeading = rc.getLocation().directionTo(avoidLoc);
+	    	if(avoidHeading != Direction.NONE && avoidHeading != Direction.OMNI) {
+	    		
+	    		Direction bestDir = Direction.NONE;
+	    		double bestDistance = myLoc.distanceSquaredTo(avoidLoc);
+	    		for(Direction tryDir : Direction.values()){
+	    			if(tryDir == Direction.OMNI ||
+	    				 tryDir == Direction.NONE ||
+	    					!rc.canMove(tryDir)) {
+	    				continue;
+	    			}
+	    			MapLocation tryLoc = myLoc.add(tryDir);
+	    			double tryDistance = tryLoc.distanceSquaredTo(avoidLoc);
+	    			if(tryDistance > bestDistance) {
+	    				bestDir = tryDir;
+	    				bestDistance = tryDistance;
+	    			}
+	    		} 
+	    		if(bestDir != Direction.NONE) {
+		    		if(rc.getDirection() != bestDir.opposite()) {
+		    			rc.setDirection(bestDir.opposite());
+		    			return true;
+		    		}
+		    		rc.moveBackward();
+		    		return true;
+	    		}
+	    	}
+	  	} catch (GameActionException e) {
+	  		r.getLog().printStackTrace(e);    		
+	  	}
+    }
+	  return false;
+	}
+	
+	protected MapLocation[] getOpenPowerCoreNeighbors() {
+		RobotController rc = r.getRc();
+		PowerNode home = rc.sensePowerCore();
+		MapLocation[] homeNeighbors = home.neighbors();
+		MapLocation[] capturableNodes = rc.senseCapturablePowerNodes();
+		MapLocation[] openNeighbors = new MapLocation[homeNeighbors.length];
+		int i = 0;
+		for(MapLocation neighbor : homeNeighbors) {
+			for(MapLocation capturableNode : capturableNodes) {
+				if(neighbor.equals(capturableNode)) {
+					openNeighbors[i] = neighbor;
+					i++;
+				}
+			}
+		}
+		MapLocation[] result = new MapLocation[i];
+		System.arraycopy(openNeighbors, 0, result, 0, i);
+		return result;
 	}
 	
 }

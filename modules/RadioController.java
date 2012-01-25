@@ -52,12 +52,12 @@ public class RadioController {
 	public void addListener(RadioListener listener, String[] messageClasses) {
 		Vector<RadioListener> listenersForClass;
 
-		r.getLog().println("adding listener: " + listener + " for classes: " + messageClasses);
+//		r.getLog().println("adding listener: " + listener + " for classes: " + messageClasses);
 
 		for(String c : messageClasses) {
 			if(c==null) break;
 
-			r.getLog().println("adding listener for class: " + c);
+//			r.getLog().println("adding listener for class: " + c);
 			if(listeners.get(c)==null) {
 				listenersForClass = new Vector<RadioListener>();
 			} else {
