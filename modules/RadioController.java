@@ -5,6 +5,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.Vector;
 
@@ -93,7 +94,7 @@ public class RadioController {
 			
 			
 			StringBuilder builder = new StringBuilder();
-			builder.append(new String(bytesOut.toByteArray()));
+			builder.append(new String(bytesOut.toByteArray(), "ISO-8859-1"));
 
 			String[] s = {builder.toString()};
 
@@ -137,8 +138,8 @@ public class RadioController {
 			if(!this.validMessage(m)) {
 				continue;
 			}
-			ByteArrayInputStream byteIn = new ByteArrayInputStream(m.strings[0].getBytes());
 			try {
+				ByteArrayInputStream byteIn = new ByteArrayInputStream(m.strings[0].getBytes("ISO-8859-1"));
 				ObjectInputStream in = new ObjectInputStream(byteIn);
 				Object nextObject = in.readObject();
 								if(nextObject.getClass() == MessageWrapper.class) {
