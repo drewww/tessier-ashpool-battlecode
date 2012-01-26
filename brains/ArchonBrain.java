@@ -24,6 +24,7 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
+import battlecode.common.TerrainTile;
 
 public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int BUILDING_COOLDOWN_VALUE = 8;
@@ -170,7 +171,21 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void dispatchScout() {
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new ScoutOrderMessage(Direction.NORTH, this.archonNumber==0));
+		
+		// Now check and see if we have an adjacent wall. If we do, send scouts towards it.
+		// If we don't, I guess we don't scout at all? or we pick a direction randomly?
+		
+		Direction spottedWall = Direction.NORTH;
+		int range = (int) java.lang.Math.sqrt(r.getRc().getType().sensorRadiusSquared);
+		for(int i=0; i<3; i++) {
+			TerrainTile t = r.getRc().senseTerrainTile(r.getRc().getLocation().add(spottedWall, range));
+			if(t.equals(TerrainTile.OFF_MAP)) {
+				break;
+			}
+			spottedWall = spottedWall.rotateRight().rotateRight();
+		}
+		
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new ScoutOrderMessage(spottedWall, this.archonNumber==0));
 		this.popState();
 	}
 	
