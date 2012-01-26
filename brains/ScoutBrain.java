@@ -1,12 +1,12 @@
 package team035.brains;
 
-import team035.brains.SoldierBrain.SoldierState;
 import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
 import team035.messages.RobotInfosMessage;
 import team035.messages.SRobotInfo;
+import team035.messages.ScoutOrderMessage;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.robots.BaseRobot;
@@ -18,6 +18,7 @@ import battlecode.common.RobotController;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
+import battlecode.common.TerrainTile;
 
 public class ScoutBrain extends RobotBrain implements RadioListener {
 
@@ -29,7 +30,8 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 		LOST,
 		LOW_FLUX,
 		OUT_OF_FLUX,
-		WAIT
+		WAIT,
+		SCOUT
 	}
 
 	protected ScoutState state;
@@ -41,6 +43,12 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	
 	protected int turnsHolding = 0;
 	protected int turnsSinceLastOutOfFluxMessage = 0;
+	
+	protected Direction scoutDirection = null;
+
+	// order is TOP, RIGHT, BOTTOM, LEFT
+	// eg NORTH, EAST, SOUTH, WEST
+	protected int[] walls = {-1, -1, -1, -1};
 	
 	public ScoutBrain(BaseRobot r) {
 		super(r);
@@ -257,6 +265,65 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 //			turnsSinceLastOutOfFluxMessage++;
 //			break;
 			break;
+		case SCOUT:
+
+			if(r.getRc().isMovementActive()) break;
+			
+			// if we're in scout mode, travel in the direction specified unless we see a wall
+			// look at MAX RANGE in our scout direction and see if it's a wall. if it's not, 
+			// the move.
+			
+			int scoutRange = (int) java.lang.Math.sqrt(r.getRc().getType().sensorRadiusSquared);
+			MapLocation locationToSense = r.getRc().getLocation().add(this.scoutDirection, scoutRange);
+			TerrainTile terrain = r.getRc().senseTerrainTile(locationToSense);
+			
+			if(terrain==TerrainTile.OFF_MAP) {
+				// we've found a wall! record it and then pick a new direction to move. 
+				
+				// (ther's a small side issue here - we should try sensing closer tiles to see if
+				// they're ALSO off map. Basically, if we spawn in wall range, we'll misjudge how
+				// far off the wall is.
+				int index;
+				int loc;
+				switch(this.scoutDirection) {
+				case NORTH:
+					index = 0;
+					loc = locationToSense.y;
+					break;
+				case EAST:
+					index = 1;
+					loc = locationToSense.x;
+					break;
+				case SOUTH:
+					index = 2;
+					loc = locationToSense.y;
+					break;
+				case WEST:
+					index = 3;
+					loc = locationToSense.x;
+					break;
+				default: 
+					index = -1;
+					loc = -1;
+				}
+				if(index!=-1) {
+					this.walls[index] = loc; 
+				}
+				
+				// TODO decide to come home if we've seen enough walls
+				
+				// always turn right for now.
+				this.scoutDirection.rotateRight();
+			} else {
+				try {
+					r.getRc().moveForward();
+				} catch (GameActionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			break;
 		}
 	}
 
@@ -269,7 +336,15 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	
 	@Override
 	public void handleMessage(MessageWrapper msg) {
-		if(msg.msg.getType()==MoveOrderMessage.type) {
+		if(msg.msg.getType()==ScoutOrderMessage.type) {
+			// if we get a scout order message switch to scout state, and ignore
+			// other messages. 
+			ScoutOrderMessage som = (ScoutOrderMessage) msg.msg;
+			
+			this.state = ScoutState.SCOUT;
+			this.scoutDirection = som.scoutDirection;
+			
+		} else if(msg.msg.getType()==MoveOrderMessage.type && this.state != ScoutState.SCOUT) {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.
 
@@ -281,7 +356,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			}
 		} else if (msg.msg.getType()==LowFluxMessage.type) {
 			
-		} else if (msg.msg.getType()==RobotInfosMessage.type) {
+		} else if (msg.msg.getType()==RobotInfosMessage.type && this.state != ScoutState.SCOUT) {
 			RobotInfosMessage rlm = (RobotInfosMessage) msg.msg;
 
 			if(!rlm.friendly) {
