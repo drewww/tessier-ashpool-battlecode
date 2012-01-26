@@ -57,6 +57,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
+		r.getRadio().addListener(this, ScoutOrderMessage.type);
 		r.getRadar().setEnemyTargetBroadcast(true);
 	}
 
