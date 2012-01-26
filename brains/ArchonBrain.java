@@ -170,7 +170,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void dispatchScout() {
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2), new ScoutOrderMessage(Direction.NORTH));
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new ScoutOrderMessage(Direction.NORTH));
 		this.popState();
 	}
 	

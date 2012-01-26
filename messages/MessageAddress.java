@@ -69,7 +69,7 @@ public class MessageAddress implements Serializable {
 	public boolean isForThisRobot() {
 		if(Clock.getRoundNum()-this.sentAt > 1) return false;
 		
-		switch(type) {
+		switch(this.type) {
 			case BROADCAST:
 				return true;
 			case ROBOT_ID:
