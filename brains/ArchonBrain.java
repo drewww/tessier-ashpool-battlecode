@@ -122,7 +122,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	protected void buildup() {
 		// Launch scout!
-		if( this.archonNumber == 0 || this.archonNumber == 1 &&
+		if((this.archonNumber == 0 || this.archonNumber == 1) &&
 			 (this.r.getRc().getFlux() > RobotType.SCOUT.spawnCost + REFUEL_FLUX)) {
 			this.pushState(ArchonState.DISPATCH_SCOUT);
 			spawnRobotIfPossible(RobotType.SCOUT);
