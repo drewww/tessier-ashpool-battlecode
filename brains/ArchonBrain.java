@@ -8,6 +8,7 @@ import team035.messages.MessageAddress;
 import team035.messages.MessageAddress.AddressType;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
+import team035.messages.ScoutOrderMessage;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
 import team035.modules.StateCache;
@@ -115,14 +116,14 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void displayState() {
-		String stateString = this.state.toString();
+		String stateString = this.getState().toString();
 		this.r.getRc().setIndicatorString(0, stateString);
 	}
 	
 	protected void buildup() {
 		// Launch scout!
 		if( this.archonNumber == 0 || this.archonNumber == 1 &&
-			 (this.r.getRc().getFlux() > RobotType.SCOUT.spawnCost + RobotType.SCOUT.maxFlux)) {
+			 (this.r.getRc().getFlux() > RobotType.SCOUT.spawnCost + REFUEL_FLUX)) {
 			this.pushState(ArchonState.DISPATCH_SCOUT);
 			spawnRobotIfPossible(RobotType.SCOUT);
 		}
@@ -169,7 +170,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void dispatchScout() {
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST, 2), new ScoutOrderMessage(closeNode));
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2), new ScoutOrderMessage(Direction.NORTH));
+		this.popState();
 	}
 	
 	protected void evade() {
