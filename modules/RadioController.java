@@ -131,24 +131,17 @@ public class RadioController {
 	// existence of the message.
 	public void receive() {
 		if(!this.enabled) return;
-//		r.getLog().println("getAllMessages()");
 		Message[] messages = this.r.getRc().getAllMessages();
 		for(Message m : messages) {
-//			r.getLog().println("validMessage()");
 			// skip invalid messages
 			if(!this.validMessage(m)) {
 				continue;
 			}
-//			r.getLog().println("new ByteArrayStream()");
 			ByteArrayInputStream byteIn = new ByteArrayInputStream(m.strings[0].getBytes());
 			try {
-//				r.getLog().println("new ObjectInputStream()");
 				ObjectInputStream in = new ObjectInputStream(byteIn);
-//				r.getLog().println("new readObject()");
 				Object nextObject = in.readObject();
-				
-//				r.getLog().println("getClass()");
-				if(nextObject.getClass() == MessageWrapper.class) {
+								if(nextObject.getClass() == MessageWrapper.class) {
 					MessageWrapper msg = (MessageWrapper)nextObject;
 					if(msg.isForThisRobot()) {
 						if(this.listeners.get(msg.msg.getType()) == null) continue;
@@ -158,8 +151,6 @@ public class RadioController {
 						}
 					}
 				}
-//				r.getLog().println("end of receive");
-
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				r.getLog().printStackTrace(e);
