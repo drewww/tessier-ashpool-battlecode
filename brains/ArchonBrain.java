@@ -33,6 +33,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_FLUX = 30;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
+//	protected final static int MOVE_FAIL_COUNTER = 1000;
 	protected final static int TOO_MANY_FRIENDLIES = 5;
 	public final static int ATTACK_TIMING = 160;
 	//protected final static RobotType SPAWN_TYPE = RobotType.DISRUPTER;
@@ -155,7 +156,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected void buildup() {
     if(Clock.getRoundNum() > ATTACK_TIMING) {
     	r.getLog().println("Triggering attack!");
+//    	MapLocation attackTarget = r.getRc().getLocation().add(Direction.NORTH, 100);
+//    	r.getNav().setTarget(attackTarget);
+//    	 this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(attackTarget));
     	this.popState();
+//    	this.pushState(ArchonState.MOVING);
     	return;
     }
     
@@ -414,6 +419,14 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 				
 			}
 		}
+    
+		if(this.isNearArchons() && spreadingCooldown == 0) {
+    	r.getLog().println("Archon loitering->spreading");
+    	this.pushState(ArchonState.SPREADING);
+    	spread();
+    	return;
+    }
+		
 		
 		if(!this.refuelOnStack) {
 			if(refuelRobotsIfPossible()) {
