@@ -59,7 +59,7 @@ public class RadarController {
 	// weapons. This depends on the unit type - they each have different targetting
 	// priorities.
 	public RobotInfo acquireTarget() {
-		r.getLog().println("acquiring target!");
+//		r.getLog().println("acquiring target!");
 		// first, get a list of targets in our attack range.
 		RobotInfo[] potentialTargets = r.getCache().getEnemyRobotsInAttackRange();
 //		double[] targetScores = new double[potentialTargets.length];
@@ -200,7 +200,7 @@ public class RadarController {
 		
 		score += potentialTarget.flux;
 		
-		r.getLog().println("score: " + score);
+//		r.getLog().println("score: " + score);
 		return score;
 	}
 }

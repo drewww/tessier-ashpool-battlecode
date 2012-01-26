@@ -141,8 +141,7 @@ public class RadioController {
 			try {
 				ObjectInputStream in = new ObjectInputStream(byteIn);
 				Object nextObject = in.readObject();
-				
-				if(nextObject.getClass() == MessageWrapper.class) {
+								if(nextObject.getClass() == MessageWrapper.class) {
 					MessageWrapper msg = (MessageWrapper)nextObject;
 					if(msg.isForThisRobot()) {
 						if(this.listeners.get(msg.msg.getType()) == null) continue;
@@ -152,7 +151,6 @@ public class RadioController {
 						}
 					}
 				}
-
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				r.getLog().printStackTrace(e);

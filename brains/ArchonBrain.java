@@ -182,7 +182,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected void dispatchAttacker() {
 		MapLocation[] archonLocs = r.getRc().senseAlliedArchons();
 		MapLocation archonLoc = archonLocs[this.archonNumber % NUM_ATTACKING_ARCHONS];
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(archonLoc));
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new MoveOrderMessage(archonLoc));
 		this.popState();
 	}
 	

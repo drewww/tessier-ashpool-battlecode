@@ -56,7 +56,6 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 		state = ScoutState.MOVE;
 
 		r.getRadio().addListener(this, MoveOrderMessage.type);
-		r.getRadio().addListener(this, LowFluxMessage.type);
 		r.getRadio().addListener(this, ScoutOrderMessage.type);
 		r.getRadar().setEnemyTargetBroadcast(true);
 	}
@@ -64,24 +63,27 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	@Override
 	public void think() {
 		// do some global environmental state checks in order of precedence.
-		if(r.getCache().numEnemyRobotsInAttackRange > 0) {
-			this.state = ScoutState.ATTACK;
-		} else if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
-			this.r.getRadio().setEnabled(false);
-			this.r.getRadar().setEnabled(false);
-			this.state = ScoutState.OUT_OF_FLUX;
-			// turn the radio off, shutdown the radar
-		} else if(this.r.getRc().getFlux() < ScoutBrain.LOW_FLUX_THRESHOLD) {
-			this.state = ScoutState.LOW_FLUX;
-		} else if(r.getCache().numRemoteRobots > 0) {
-			
-			// we only get here if we don't see any robots ourselves, but 
-			// OTHER people see robots to attack. But we prefer to transition
-			// into ATTACK if we can.
-			r.getLog().println("Setting state to SEEK_TARGET");
-			this.state = ScoutState.SEEK_TARGET;
+
+		if(this.state != ScoutState.SCOUT) {
+			if(r.getCache().numEnemyRobotsInAttackRange > 0) {
+				this.state = ScoutState.ATTACK;
+			} else if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
+				this.r.getRadio().setEnabled(false);
+				this.r.getRadar().setEnabled(false);
+				this.state = ScoutState.OUT_OF_FLUX;
+				// turn the radio off, shutdown the radar
+			} else if(this.r.getRc().getFlux() < ScoutBrain.LOW_FLUX_THRESHOLD) {
+				this.state = ScoutState.LOW_FLUX;
+			} else if(r.getCache().numRemoteRobots > 0) {
+
+				// we only get here if we don't see any robots ourselves, but 
+				// OTHER people see robots to attack. But we prefer to transition
+				// into ATTACK if we can.
+				r.getLog().println("Setting state to SEEK_TARGET");
+				this.state = ScoutState.SEEK_TARGET;
+			}
 		}
-		
+
 		this.shareFlux();
 
 		// no matter our state, check and see if we should heal
@@ -270,6 +272,16 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 
 			if(r.getRc().isMovementActive()) break;
 			
+			if(!this.r.getRc().getDirection().equals(this.scoutDirection)) {
+				try {
+					r.getRc().setDirection(this.scoutDirection);
+				} catch (GameActionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			}
+			
 			// if we're in scout mode, travel in the direction specified unless we see a wall
 			// look at MAX RANGE in our scout direction and see if it's a wall. if it's not, 
 			// the move.
@@ -314,7 +326,13 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 				// TODO decide to come home if we've seen enough walls
 				
 				// always turn right for now.
-				this.scoutDirection.rotateRight();
+				this.scoutDirection = this.scoutDirection.rotateRight().rotateRight();
+				try {
+					this.r.getRc().setDirection(this.scoutDirection);
+				} catch (GameActionException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else {
 				try {
 					r.getRc().moveForward();
@@ -341,10 +359,11 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			// if we get a scout order message switch to scout state, and ignore
 			// other messages. 
 			ScoutOrderMessage som = (ScoutOrderMessage) msg.msg;
+			r.getLog().println("--------------------ENTERING SCOUT MODE: " + som.scoutDirection);
+
 			
 			this.state = ScoutState.SCOUT;
 			this.scoutDirection = som.scoutDirection;
-			
 		} else if(msg.msg.getType()==MoveOrderMessage.type && this.state != ScoutState.SCOUT) {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.
@@ -355,8 +374,6 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			if(this.state==ScoutState.HOLD || this.state==ScoutState.WAIT) {
 				this.state = ScoutState.MOVE;
 			}
-		} else if (msg.msg.getType()==LowFluxMessage.type) {
-			
 		} else if (msg.msg.getType()==RobotInfosMessage.type && this.state != ScoutState.SCOUT) {
 			RobotInfosMessage rlm = (RobotInfosMessage) msg.msg;
 
