@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import team035.robots.BaseRobot;
 import battlecode.common.Clock;
+import battlecode.common.MapLocation;
 import battlecode.common.RobotType;
 
 public class MessageAddress implements Serializable {
@@ -12,13 +13,16 @@ public class MessageAddress implements Serializable {
 	public enum AddressType {
 		BROADCAST,
 		ROBOT_ID,
-		ROBOT_TYPE
+		ROBOT_TYPE,
+		BROADCAST_DISTANCE
 	}
 
 	public AddressType type;
 	public int id;
 	public RobotType robotType;
 	public int sentAt;
+	public int distanceSquared;
+	public MapLocation fromLocation;
 	
 	public MessageAddress(AddressType t, int id) {
 		sentAt = Clock.getRoundNum();
@@ -27,6 +31,17 @@ public class MessageAddress implements Serializable {
 			this.id = id;
 		} else {
 			System.out.println("ERR: Tried to make a MessageAddress with an int and an AddressType other than ROBOT_ID");
+		}
+	}
+	
+	public MessageAddress(AddressType t, int distance, MapLocation location) {
+		sentAt = Clock.getRoundNum();
+		if(t == AddressType.BROADCAST_DISTANCE) {
+			this.type = t;
+			this.distanceSquared = distance;
+			this.fromLocation = location;
+		} else {
+			System.out.println("ERR: Tried to make a MessageAddress with an int and MaLocation and an AddressType other than BROADCAST_DISTANCE");
 		}
 	}
 	
@@ -62,6 +77,9 @@ public class MessageAddress implements Serializable {
 				else return false;
 			case ROBOT_TYPE:
 				if(this.robotType==BaseRobot.robot.getRc().getType()) return true;
+				else return false;
+			case BROADCAST_DISTANCE:
+				if(BaseRobot.robot.getRc().getLocation().distanceSquaredTo(this.fromLocation) < this.distanceSquared) return true;
 				else return false;
 			default:
 				return false;

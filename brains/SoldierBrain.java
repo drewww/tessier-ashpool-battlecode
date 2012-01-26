@@ -52,6 +52,8 @@ public class SoldierBrain extends RobotBrain implements RadioListener {
 		r.getRadio().addListener(this, MoveOrderMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
 		r.getRadio().addListener(this, RobotInfosMessage.type);
+		
+		r.getRadar().setEnemyTargetBroadcast(true);
 	}
 
 	@Override
