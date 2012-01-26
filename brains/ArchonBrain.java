@@ -32,7 +32,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
 	protected final static int TOO_MANY_FRIENDLIES = 5;
+	protected final static int NUM_ATTACKING_ARCHONS = 2;
 	public final static int ATTACK_TIMING = 160;
+	
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 	protected int archonNumber;
@@ -42,7 +44,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	protected enum ArchonState {
 		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
-		BUILDUP, DISPATCH_SCOUT
+		BUILDUP, DISPATCH_SCOUT, DISPATCH_ATTACKER
 	}
 
 	
@@ -112,6 +114,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		case DISPATCH_SCOUT:
 			dispatchScout();
 			break;
+		case DISPATCH_ATTACKER:
+			dispatchAttacker();
+			break;
 		}
 	}
 	
@@ -170,7 +175,14 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void dispatchScout() {
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2), new ScoutOrderMessage(Direction.NORTH));
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new ScoutOrderMessage(Direction.NORTH));
+		this.popState();
+	}
+	
+	protected void dispatchAttacker() {
+		MapLocation[] archonLocs = r.getRc().senseAlliedArchons();
+		MapLocation archonLoc = archonLocs[this.archonNumber % NUM_ATTACKING_ARCHONS];
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(archonLoc));
 		this.popState();
 	}
 	
@@ -282,23 +294,38 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     	return;
     }
     
-    MapLocation nodeLoc;
-    // Preferentially capture nodes that make us vulnerable
-    MapLocation[] vulnerableHomeLocs = getOpenPowerCoreNeighbors();
-    if(vulnerableHomeLocs.length != 0) {
-     r.getLog().println("Home locs vulnerable!");
-     nodeLoc = vulnerableHomeLocs[rng.nextInt(vulnerableHomeLocs.length)];
+    // low number archons are on offense
+    if(this.archonNumber < NUM_ATTACKING_ARCHONS) {
+	    MapLocation nodeLoc;
+	    // Preferentially capture nodes that make us vulnerable
+	    MapLocation[] vulnerableHomeLocs = getOpenPowerCoreNeighbors();
+	    if(vulnerableHomeLocs.length != 0) {
+	     r.getLog().println("Home locs vulnerable!");
+	     nodeLoc = vulnerableHomeLocs[this.archonNumber % vulnerableHomeLocs.length];
+	    } else {
+	    	// get a random node
+		    //nodeLoc = getRandomCapturableNode();
+	    	MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
+	    	nodeLoc = nodeLocs[this.archonNumber % nodeLocs.length];
+	    }
+	
+	    this.r.getNav().setTarget(nodeLoc, true);
+	    this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
+	    
+	    this.pushState(ArchonState.MOVING);
+	    r.getLog().println("Archon loitering->moving");
+	    this.move();
     } else {
-    	// get a random node
-	    nodeLoc = getRandomCapturableNode();
+    	r.getLog().println("Archon spawning " + this.archonNumber);
+    	
+    	if(spawnRobotIfPossible()) {
+    		ArchonState swap = this.popState();
+    		this.pushState(ArchonState.DISPATCH_ATTACKER);
+    		this.pushState(swap);
+    	}
+		  
     }
-
-    this.r.getNav().setTarget(nodeLoc, true);
-    this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
     
-    this.pushState(ArchonState.MOVING);
-    r.getLog().println("Archon loitering->moving");
-    this.move();
 	}
 	
 	protected void spread() {
@@ -451,7 +478,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 					if(type == RobotType.SCOUT){
 						level = RobotLevel.IN_AIR;
 					}
-					this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), level, 0.9*REFUEL_FLUX);
+					//this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), level, 0.9*REFUEL_FLUX);
 					this.incrementSpawnType();
 				} catch (GameActionException e) {
 					// TODO Auto-generated catch block
@@ -498,7 +525,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			LowFluxMessage lowFluxMessage = (LowFluxMessage) msg.msg;
 			r.getLog().println("Received a refueling request!");
 			
-			if(this.r.getRc().getLocation().distanceSquaredTo(lowFluxMessage.loc)<=2) {
+			if(this.r.getRc().getLocation().isAdjacentTo(lowFluxMessage.loc)) {
 				
 				
 				// do a transfer.
