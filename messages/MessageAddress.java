@@ -80,7 +80,6 @@ public class MessageAddress implements Serializable {
 				else return false;
 			case BROADCAST_DISTANCE:
 				int distanceSquared = BaseRobot.robot.getRc().getLocation().distanceSquaredTo(this.fromLocation);
-//				BaseRobot.robot.getLog().println("BROADCAST_DISTANCE: " + distanceSquared + " (must be less than " + this.distanceSquared + ")");
 				if(distanceSquared <= this.distanceSquared) return true;
 				else return false;
 			default:

@@ -45,6 +45,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	protected int turnsSinceLastOutOfFluxMessage = 0;
 	
 	protected Direction scoutDirection = null;
+	protected boolean clockwise = false;
 
 	// order is TOP, RIGHT, BOTTOM, LEFT
 	// eg NORTH, EAST, SOUTH, WEST
@@ -326,7 +327,12 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 				// TODO decide to come home if we've seen enough walls
 				
 				// always turn right for now.
-				this.scoutDirection = this.scoutDirection.rotateRight().rotateRight();
+				if(this.clockwise) {
+					this.scoutDirection = this.scoutDirection.rotateRight().rotateRight();					
+				} else {
+					this.scoutDirection = this.scoutDirection.rotateLeft().rotateLeft();										
+				}
+				
 				try {
 					this.r.getRc().setDirection(this.scoutDirection);
 				} catch (GameActionException e) {
@@ -364,6 +370,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			
 			this.state = ScoutState.SCOUT;
 			this.scoutDirection = som.scoutDirection;
+			this.clockwise = som.clockwise;
 		} else if(msg.msg.getType()==MoveOrderMessage.type && this.state != ScoutState.SCOUT) {
 			MoveOrderMessage mom = (MoveOrderMessage) msg.msg;
 			// if we get a move order message, update our move destination.

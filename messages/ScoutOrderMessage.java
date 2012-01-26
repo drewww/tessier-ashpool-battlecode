@@ -10,9 +10,11 @@ public class ScoutOrderMessage extends BaseMessage {
 	// specified as a wall and a direction. 
 	
 	public Direction scoutDirection;
+	public boolean clockwise = false;
 	
-	public ScoutOrderMessage(Direction scout) {
+	public ScoutOrderMessage(Direction scout, boolean clockwise) {
 		this.scoutDirection = scout;
+		this.clockwise = clockwise;
 	}
 	
 	@Override
