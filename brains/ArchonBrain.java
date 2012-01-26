@@ -136,11 +136,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		
     if(Clock.getRoundNum() > ATTACK_TIMING) {
     	r.getLog().println("Triggering attack!");
-//    	MapLocation attackTarget = r.getRc().getLocation().add(Direction.NORTH, 100);
-//    	r.getNav().setTarget(attackTarget);
-//    	 this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(attackTarget));
     	this.popState();
-//    	this.pushState(ArchonState.MOVING);
     	return;
     }
     
@@ -308,37 +304,27 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     	return;
     }
     
-    // low number archons are on offense
-    if(this.archonNumber < NUM_ATTACKING_ARCHONS) {
-	    MapLocation nodeLoc;
-	    // Preferentially capture nodes that make us vulnerable
-	    MapLocation[] vulnerableHomeLocs = getOpenPowerCoreNeighbors();
-	    if(vulnerableHomeLocs.length != 0) {
-	     r.getLog().println("Home locs vulnerable!");
-	     nodeLoc = vulnerableHomeLocs[this.archonNumber % vulnerableHomeLocs.length];
-	    } else {
-	    	// get a random node
-		    //nodeLoc = getRandomCapturableNode();
-	    	MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
-	    	nodeLoc = nodeLocs[this.archonNumber % nodeLocs.length];
-	    }
-	
-	    this.r.getNav().setTarget(nodeLoc, true);
-	    this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
-	    
-	    this.pushState(ArchonState.MOVING);
-	    r.getLog().println("Archon loitering->moving");
-	    this.move();
+
+    MapLocation nodeLoc;
+    // Preferentially capture nodes that make us vulnerable
+    MapLocation[] vulnerableHomeLocs = getOpenPowerCoreNeighbors();
+    if(vulnerableHomeLocs.length != 0) {
+     r.getLog().println("Home locs vulnerable!");
+     nodeLoc = vulnerableHomeLocs[this.archonNumber % vulnerableHomeLocs.length];
     } else {
-    	r.getLog().println("Archon spawning " + this.archonNumber);
-    	
-    	if(spawnRobotIfPossible()) {
-    		ArchonState swap = this.popState();
-    		this.pushState(ArchonState.DISPATCH_ATTACKER);
-    		this.pushState(swap);
-    	}
-		  
+    	// get a random node
+	    //nodeLoc = getRandomCapturableNode();
+    	MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
+    	nodeLoc = nodeLocs[this.archonNumber % nodeLocs.length];
     }
+
+    this.r.getNav().setTarget(nodeLoc, true);
+    this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(r.getNav().getTarget()));
+    
+    this.pushState(ArchonState.MOVING);
+    r.getLog().println("Archon loitering->moving");
+    this.move();
+    
     
 	}
 	
