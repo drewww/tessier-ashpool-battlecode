@@ -25,38 +25,28 @@ import battlecode.common.RobotLevel;
 import battlecode.common.RobotType;
 
 public class ArchonBrain extends RobotBrain implements RadioListener {
-	protected final static double NODE_DETECTION_RADIUS_SQ = 16;
-	//protected final static double INITIAL_ROBOT_FLUX = 25;
 	protected final static int BUILDING_COOLDOWN_VALUE = 8;
 	protected final static int SPREADING_COOLDOWN_VALUE = 3;
-	protected final static int REFUELING_COOLDOWN_VALUE = 20;	
 	protected final static int REFUEL_FLUX = 30;
 	protected final static int REFUEL_THRESHOLD = 10;
 	protected final static int MOVE_FAIL_COUNTER = 100;
-//	protected final static int MOVE_FAIL_COUNTER = 1000;
 	protected final static int TOO_MANY_FRIENDLIES = 5;
 	public final static int ATTACK_TIMING = 160;
-	//protected final static RobotType SPAWN_TYPE = RobotType.DISRUPTER;
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
+	protected int archonNumber;
 	
 	protected final static RobotType[] SPAWN_LIST = {RobotType.SOLDIER, RobotType.SCOUT,
-																			RobotType.SOLDIER, RobotType.SOLDIER}; 
-	
-//	protected final static RobotType[] SPAWN_LIST = {RobotType.SOLDIER, RobotType.SOLDIER,
-//		RobotType.SOLDIER, RobotType.SOLDIER,}; 
+																			RobotType.SOLDIER, RobotType.SOLDIER};
 	
 	protected enum ArchonState {
 		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
-		BUILDUP
+		BUILDUP, DISPATCH_SCOUT
 	}
 
 	
 	protected ArchonState state;
-	protected MapLocation nodeBuildLocation;
-	protected PowerNode targetPowerNode;
 	
-	protected boolean fluxTransferQueued = false;
 	protected MapLocation fluxTransferLoc = null;
 	protected RobotLevel fluxTransferLevel = null;
 	protected double fluxTransferAmount = 0.0;
@@ -65,8 +55,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int moveFailCooldown;
 	protected int refuelingCooldown;
 	protected int nextSpawnType;
-	protected MapLocation currentWaypoint;
-	protected MapLocation lastWaypoint;
 	protected boolean refuelOnStack;
 	protected Random rng;
 	
@@ -80,17 +68,19 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.initCooldowns();
 		this.initStateStack();
 		this.pushState(ArchonState.BUILDUP);
+		this.setArchonNumber();
 		this.nextSpawnType = 0;
-		this.lastWaypoint = null;
-		this.currentWaypoint = null;
 		this.refuelOnStack = false;
 		rng = new Random(this.r.getRc().getRobot().getID()+1);
+		
+		
 	}
 
 	
 
 	@Override
 	public void think() {
+		this.setArchonNumber();
 		this.updateCooldowns();
 		this.scanForEnemies();
 		this.shareFlux();
@@ -118,42 +108,25 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		case EVADING:
 			evade();
 			break;
+		case DISPATCH_SCOUT:
+			dispatchScout();
+			break;
 		}
 	}
 	
 	protected void displayState() {
-		String stateString = "NONE";
-		switch(this.getState()) {
-		case BUILDING:
-			stateString = "BUILDING";
-			break;
-		case EVADING:
-			stateString = "EVADING";
-			break;
-		case FLEEING:
-			stateString = "FLEEING";
-			break;
-		case LOITERING:
-			stateString = "LOITERING";
-			break;
-		case MOVING:
-			stateString = "MOVING";
-			break;
-		case REFUELING:
-			stateString = "REFUELING";
-			break;
-		case SPREADING:
-			stateString = "SPREADING";
-			break;
-		case BUILDUP:
-			stateString = "BUILDUP";
-			break;
-		}
-		
+		String stateString = this.state.toString();
 		this.r.getRc().setIndicatorString(0, stateString);
 	}
 	
 	protected void buildup() {
+		// Launch scout!
+		if( this.archonNumber == 0 || this.archonNumber == 1 &&
+			 (this.r.getRc().getFlux() > RobotType.SCOUT.spawnCost + RobotType.SCOUT.maxFlux)) {
+			this.pushState(ArchonState.DISPATCH_SCOUT);
+			spawnRobotIfPossible(RobotType.SCOUT);
+		}
+		
     if(Clock.getRoundNum() > ATTACK_TIMING) {
     	r.getLog().println("Triggering attack!");
 //    	MapLocation attackTarget = r.getRc().getLocation().add(Direction.NORTH, 100);
@@ -193,6 +166,10 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
     	MapLocation closeNode = getRandomCapturableNode();
       this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(closeNode));
     }
+	}
+	
+	protected void dispatchScout() {
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST, 2), new ScoutOrderMessage(closeNode));
 	}
 	
 	protected void evade() {
@@ -374,7 +351,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		try {
 			MapLocation nearestNode = this.getNearestCapturableNode();
 			if(nearestNode.isAdjacentTo(rc.getLocation())) {
-				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.BROADCAST), new ClaimNodeMessage(this.nodeBuildLocation));
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.BROADCAST), new ClaimNodeMessage(nearestNode));
 				
 				Direction nodeDirection = rc.getLocation().directionTo(nearestNode);
 				if(rc.getDirection() != nodeDirection) {
@@ -459,10 +436,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected boolean spawnRobotIfPossible() {
-//		if(this.refuelOnStack) {
-//			return false;
-//		}
 		RobotType type = this.getTypeToSpawn();
+		return spawnRobotIfPossible(type);
+	}
+	
+	protected boolean spawnRobotIfPossible(RobotType type) {
 		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > type.spawnCost + REFUEL_FLUX) {
 			if(canSpawn()){
 				try {
@@ -483,6 +461,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		}
 		return false;
 	}
+
 	
 	// Helper stuffs
 	protected PowerNode getNearestAlliedNode() {
@@ -822,6 +801,16 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		MapLocation[] result = new MapLocation[i];
 		System.arraycopy(openNeighbors, 0, result, 0, i);
 		return result;
+	}
+	
+	protected void setArchonNumber() {
+		MapLocation[] archonLocs = r.getRc().senseAlliedArchons();
+		MapLocation myLoc = r.getRc().getLocation();
+		for(int i = 0; i < archonLocs.length; i++) {
+			if(myLoc.equals(archonLocs[i])) {
+				this.archonNumber = i;
+			}
+		}
 	}
 	
 }

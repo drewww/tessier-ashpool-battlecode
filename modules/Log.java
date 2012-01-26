@@ -8,7 +8,7 @@ import team035.robots.BaseRobot;
 
 public class Log {
 	BaseRobot robot;
-	boolean recording = false; 
+	boolean recording = true; 
 	
 	public Log(BaseRobot r) {
 		this.robot = r;
