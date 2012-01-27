@@ -30,7 +30,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int BUILDING_COOLDOWN_VALUE = 8;
 	protected final static int SPREADING_COOLDOWN_VALUE = 3;
 	protected final static int REFUEL_FLUX = 30;
-	protected final static int REFUEL_THRESHOLD = 10;
+	protected final static int REFUEL_THRESHOLD = 20;
 	protected final static int MOVE_FAIL_COUNTER = 100;
 	protected final static int TOO_MANY_FRIENDLIES = 5;
 	protected final static int NUM_ATTACKING_ARCHONS = 2;
@@ -41,7 +41,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int archonNumber;
 	
 	protected final static RobotType[] SPAWN_LIST = {RobotType.SOLDIER, RobotType.SCOUT,
-																			RobotType.SOLDIER, RobotType.SOLDIER};
+																			RobotType.SOLDIER, RobotType.SOLDIER, RobotType.DISRUPTER};
 	
 	protected enum ArchonState {
 		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
@@ -470,7 +470,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected boolean spawnRobotIfPossible(RobotType type) {
-		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > type.spawnCost + REFUEL_FLUX) {
+		if(!r.getRc().isMovementActive() && (r.getRc().getFlux() > type.spawnCost + REFUEL_FLUX ||
+				this.r.getRc().getFlux() == RobotType.ARCHON.maxFlux)) {
 			if(canSpawn()){
 				try {
 					r.getRc().spawn(type);

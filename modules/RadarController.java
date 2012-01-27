@@ -99,7 +99,9 @@ public class RadarController {
 				curMaxIndex = i;
 			}
 		}
-		
+		if(curMaxScore == 0) {
+			return null;
+		}
 		return potentialTargets[curMaxIndex];
 	}
 	
