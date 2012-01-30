@@ -183,6 +183,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			spottedWall = spottedWall.rotateRight().rotateRight();
 		}
 		
+		spottedWall = spottedWall.rotateRight().rotateRight().rotateRight();
+		
 		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new ScoutOrderMessage(spottedWall, this.archonNumber==0));
 		this.popState();
 	}

@@ -287,7 +287,6 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			if(targetReturnArchon.distanceSquaredTo(r.getRc().getLocation()) < 64) {
 				// we're close enough to yell out at the archon
 				RobotInfosMessage msg = new RobotInfosMessage(this.enemiesSighted, true);
-				
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.ROBOT_TYPE, RobotType.ARCHON), msg);
 			}
 			
@@ -308,15 +307,14 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			
 			// if we're in scout mode, travel in the direction specified unless we see a wall
 			// look at MAX RANGE in our scout direction and see if it's a wall. if it's not, 
-			// the move.
+			// then move.
 			
 			int scoutRange = (int) java.lang.Math.sqrt(r.getRc().getType().sensorRadiusSquared);
-			MapLocation locationToSense = r.getRc().getLocation().add(this.scoutDirection, scoutRange);
+			System.out.println("scoutRange " + scoutRange);
+			MapLocation locationToSense = r.getRc().getLocation().add(this.scoutDirection, scoutRange-2);
 			TerrainTile terrain = r.getRc().senseTerrainTile(locationToSense);
-			
+			System.out.println("terrain tile: " + terrain);
 			if(terrain==TerrainTile.OFF_MAP) {
-				
-				// always turn right for now.
 				if(this.clockwise) {
 					this.scoutDirection = this.scoutDirection.rotateRight().rotateRight();					
 				} else {
