@@ -8,6 +8,7 @@ import team035.messages.MessageAddress;
 import team035.messages.MessageAddress.AddressType;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
+import team035.messages.RobotInfosMessage;
 import team035.messages.ScoutOrderMessage;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
@@ -42,7 +43,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int archonNumber;
 	
 	protected enum ArchonState {
-		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
+		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, EVADING, 
 		BUILDUP, DISPATCH_SCOUT, DISPATCH_ATTACKER
 	}
 
@@ -541,7 +542,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			}
 		}
 		
-
+		if(msg.msg.getType()==RobotInfosMessage.type) {
+			// foo
+		}
 		
 	}
 	
@@ -748,11 +751,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		return RobotType.SOLDIER;
 	}
 	
-//	protected void incrementSpawnType() {
-//		this.nextSpawnType++;
-//		this.nextSpawnType %= this.SPAWN_LIST.length;
-//	}
-//	
 	protected boolean spreadIfNecessary() {
     if(this.isNearArchons() && spreadingCooldown == 0) {
     	r.getLog().println("Archon loitering->spreading");
