@@ -8,6 +8,7 @@ import team035.messages.MessageAddress;
 import team035.messages.MessageAddress.AddressType;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
+import team035.messages.RobotInfosMessage;
 import team035.messages.ScoutOrderMessage;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
@@ -30,21 +31,19 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected final static int BUILDING_COOLDOWN_VALUE = 8;
 	protected final static int SPREADING_COOLDOWN_VALUE = 3;
 	protected final static int REFUEL_FLUX = 30;
-	protected final static int REFUEL_THRESHOLD = 10;
+	protected final static int REFUEL_THRESHOLD = 20;
 	protected final static int MOVE_FAIL_COUNTER = 100;
 	protected final static int TOO_MANY_FRIENDLIES = 5;
-	protected final static int NUM_ATTACKING_ARCHONS = 2;
+	protected final static int RECENCY_THRESHOLD = 50;
+	protected final static int SCOUT_SPAWN_FREQUENCY = 500;
 	public final static int ATTACK_TIMING = 160;
 	
 	protected ArchonState[] stateStack;
 	protected int stateStackTop;
 	protected int archonNumber;
 	
-	protected final static RobotType[] SPAWN_LIST = {RobotType.SOLDIER, RobotType.SCOUT,
-																			RobotType.SOLDIER, RobotType.SOLDIER};
-	
 	protected enum ArchonState {
-		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, FLEEING, EVADING, 
+		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, EVADING, 
 		BUILDUP, DISPATCH_SCOUT, DISPATCH_ATTACKER
 	}
 
@@ -58,9 +57,11 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int buildingCooldown;
 	protected int moveFailCooldown;
 	protected int refuelingCooldown;
-	protected int nextSpawnType;
 	protected boolean refuelOnStack;
 	protected Random rng;
+	protected int turnsSinceLastEnemySeen;
+	protected int turnsSinceLastScorcherSeen;
+	protected int turnsSinceLastScoutMade;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -69,15 +70,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		r.getRadio().addListener(this, LowFluxMessage.type);
 		
 		r.getRadar().setEnemyTargetBroadcast(true);
-		this.initCooldowns();
+		this.initCooldownsAndCounters();
 		this.initStateStack();
 		this.pushState(ArchonState.BUILDUP);
 		this.setArchonNumber();
-		this.nextSpawnType = 0;
 		this.refuelOnStack = false;
 		rng = new Random(this.r.getRc().getRobot().getID()+1);
-		
-		
 	}
 
 	
@@ -85,8 +83,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	@Override
 	public void think() {
 		this.setArchonNumber();
-		this.updateCooldowns();
 		this.scanForEnemies();
+		this.updateCooldownsAndCounters();
 		this.shareFlux();
 		
 		this.displayState();
@@ -190,9 +188,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected void dispatchAttacker() {
-		MapLocation[] archonLocs = r.getRc().senseAlliedArchons();
-		MapLocation archonLoc = archonLocs[this.archonNumber % NUM_ATTACKING_ARCHONS];
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new MoveOrderMessage(archonLoc));
+		MapLocation myLoc = r.getRc().getLocation();
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new MoveOrderMessage(myLoc));
 		this.popState();
 	}
 	
@@ -203,8 +200,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		
 		RobotController rc = this.r.getRc();
 		RobotInfo[] enemies = r.getCache().getEnemyAttackRobotsInRange();
-		//MapLocation centroid = new MapLocation(0,0);
-    //centroid = new MapLocation(centroid.x / enemies.length, centroid.y / enemies.length);
 		MapLocation closestLoc = null;
 		MapLocation myLoc = r.getRc().getLocation();
 		double closestDistance = Double.MAX_VALUE;
@@ -223,17 +218,25 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 
 
 	protected void scanForEnemies() {
+		if(r.getCache().numEnemyRobotsInRange > 0) {
+			this.turnsSinceLastEnemySeen = 0;
+		}
+		for(RobotInfo robot : r.getCache().getEnemyRobots()) {
+			if(robot.type == RobotType.SCORCHER) {
+				this.turnsSinceLastScorcherSeen = 0;
+				break;
+			}
+		}
+		
 		if(r.getCache().numEnemyAttackRobotsInRange > 0) {
 			boolean noThreats = true;
 			for(RobotInfo enemy : r.getCache().getEnemyAttackRobotsInRange()) {
 				if(enemy.flux > 0.5) {
-//					r.getLog().println("Found a threatening enemy");
 					noThreats = false;
 					break;
 				}
 			}
 			if(noThreats) {
-//				r.getLog().println("Found no threatening enemies");
 			}
 			
 			if(noThreats == false) {
@@ -243,7 +246,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 				return;
 			}
 		}
-		// if we got to here, then there's nothing to worry about
 		if(this.getState() == ArchonState.EVADING) {
 				this.popState();
 		}
@@ -254,7 +256,6 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected void refuel() {
 		GameObject go;
 		try {
-			//go = this.r.getRc().senseObjectAtLocation(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), RobotLevel.ON_GROUND);
 			if(this.r.getRc().canSenseSquare(fluxTransferLoc)) {
 				go = this.r.getRc().senseObjectAtLocation(fluxTransferLoc, fluxTransferLevel);
 				if(go!=null) {
@@ -312,8 +313,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
      r.getLog().println("Home locs vulnerable!");
      nodeLoc = vulnerableHomeLocs[this.archonNumber % vulnerableHomeLocs.length];
     } else {
-    	// get a random node
-	    //nodeLoc = getRandomCapturableNode();
+    	// get a node to visit
     	MapLocation[] nodeLocs = r.getRc().senseCapturablePowerNodes();
     	nodeLoc = nodeLocs[this.archonNumber % nodeLocs.length];
     }
@@ -470,16 +470,14 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	}
 	
 	protected boolean spawnRobotIfPossible(RobotType type) {
-		if(!r.getRc().isMovementActive() && r.getRc().getFlux() > type.spawnCost + REFUEL_FLUX) {
+		if(!r.getRc().isMovementActive() && (r.getRc().getFlux() > type.spawnCost + REFUEL_FLUX ||
+				this.r.getRc().getFlux() == RobotType.ARCHON.maxFlux)) {
 			if(canSpawn()){
 				try {
 					r.getRc().spawn(type);
-					RobotLevel level = RobotLevel.ON_GROUND;
 					if(type == RobotType.SCOUT){
-						level = RobotLevel.IN_AIR;
+						this.turnsSinceLastScoutMade = 0;
 					}
-					//this.queueFluxTransfer(this.r.getRc().getLocation().add(this.r.getRc().getDirection()), level, 0.9*REFUEL_FLUX);
-					this.incrementSpawnType();
 				} catch (GameActionException e) {
 					// TODO Auto-generated catch block
 					r.getLog().printStackTrace(e);
@@ -544,7 +542,9 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 			}
 		}
 		
-
+		if(msg.msg.getType()==RobotInfosMessage.type) {
+			// foo
+		}
 		
 	}
 	
@@ -637,7 +637,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	// Cooldown stuffs
 	
-	protected void updateCooldowns() {
+	protected void updateCooldownsAndCounters() {
 		if(spreadingCooldown > 0) {
 			spreadingCooldown--;
 		}
@@ -650,13 +650,19 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(moveFailCooldown > 0 && this.getState() == ArchonState.MOVING) {
 			moveFailCooldown--;
 		}
+		turnsSinceLastEnemySeen++;
+		turnsSinceLastScorcherSeen++;
+		turnsSinceLastScoutMade++;
 	}
 	
-	protected void initCooldowns() {
+	protected void initCooldownsAndCounters() {
 		this.spreadingCooldown = 0;
 		this.buildingCooldown = 0;
 		this.moveFailCooldown = 0;
 		this.refuelingCooldown = 0;
+		this.turnsSinceLastEnemySeen = RECENCY_THRESHOLD+1;
+		this.turnsSinceLastScorcherSeen = RECENCY_THRESHOLD+1;
+		this.turnsSinceLastScoutMade = 0;
 	}
 
 	// Stack state stuffs
@@ -720,21 +726,29 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 
 
 	protected RobotType getTypeToSpawn() {
-		Random rng = new Random();
-		RobotType[] types = RobotType.values(); 
-		
-		RobotType spawnType;
-//		do {
-//			spawnType = types[rng.nextInt(types.length)];
-//		} while(spawnType == RobotType.TOWER || 
-//				spawnType == RobotType.ARCHON || 
-//				spawnType == RobotType.SCOUT);
-		return SPAWN_LIST[this.nextSpawnType];		
-	}
-	
-	protected void incrementSpawnType() {
-		this.nextSpawnType++;
-		this.nextSpawnType %= this.SPAWN_LIST.length;
+		// Just soldiers for build up stage
+		if(this.getState() == ArchonState.BUILDUP) {
+			return RobotType.SOLDIER;
+		}
+		if(this.turnsSinceLastEnemySeen > RECENCY_THRESHOLD && 
+				this.turnsSinceLastScoutMade > SCOUT_SPAWN_FREQUENCY) {
+			boolean scoutNearby = false;
+			for(RobotInfo robot : r.getCache().getFriendlyRobots()) {
+				// don't build scouts if we already have one nearby				
+				if(robot.type == RobotType.SCOUT) {
+					scoutNearby = true;
+					break;
+				}
+			}
+			if(!scoutNearby) {
+				return RobotType.SCOUT;
+			}
+		}
+		if(this.turnsSinceLastScorcherSeen < RECENCY_THRESHOLD) {
+			System.out.println("Turns since last scorcher : " + this.turnsSinceLastScorcherSeen);
+			return RobotType.DISRUPTER;
+		}
+		return RobotType.SOLDIER;
 	}
 	
 	protected boolean spreadIfNecessary() {

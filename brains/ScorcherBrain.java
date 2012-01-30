@@ -189,8 +189,23 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 					}
 					
 				}
+			}	
+			RobotController rc = this.r.getRc();
+			enemies = r.getCache().getEnemyAttackRobotsInRange();
+			int optimalDistance = RobotType.SCORCHER.attackRadiusMaxSquared;
+			//MapLocation centroid = new MapLocation(0,0);
+	    //centroid = new MapLocation(centroid.x / enemies.length, centroid.y / enemies.length);
+			MapLocation closestLoc = null;
+			MapLocation myLoc = r.getRc().getLocation();
+			double closestDistance = Double.MAX_VALUE;
+			for(RobotInfo enemy : enemies) {
+				double distance = myLoc.distanceSquaredTo(enemy.location);
+				if(distance < optimalDistance) {
+					closestLoc = enemy.location;
+					closestDistance = distance;
+				}
 			}
-			
+			this.moveAwayFrom(closestLoc);
 			break;
 		case LOST:
 			MapLocation archonLoc = this.r.getRc().senseAlliedArchons()[0];
@@ -315,4 +330,45 @@ public class ScorcherBrain extends RobotBrain implements RadioListener {
 		}
 		return false;
 	}
+	
+	protected boolean moveAwayFrom(MapLocation avoidLoc) {
+		RobotController rc = r.getRc();
+		if(!rc.isMovementActive()) {
+			MapLocation myLoc = rc.getLocation();
+	  	try {
+	
+	    	Direction avoidHeading = rc.getLocation().directionTo(avoidLoc);
+	    	if(avoidHeading != Direction.NONE && avoidHeading != Direction.OMNI) {
+	    		
+	    		Direction bestDir = Direction.NONE;
+	    		double bestDistance = myLoc.distanceSquaredTo(avoidLoc);
+	    		for(Direction tryDir : Direction.values()){
+	    			if(tryDir == Direction.OMNI ||
+	    				 tryDir == Direction.NONE ||
+	    					!rc.canMove(tryDir)) {
+	    				continue;
+	    			}
+	    			MapLocation tryLoc = myLoc.add(tryDir);
+	    			double tryDistance = tryLoc.distanceSquaredTo(avoidLoc);
+	    			if(tryDistance > bestDistance) {
+	    				bestDir = tryDir;
+	    				bestDistance = tryDistance;
+	    			}
+	    		} 
+	    		if(bestDir != Direction.NONE) {
+		    		if(rc.getDirection() != bestDir.opposite()) {
+		    			rc.setDirection(bestDir.opposite());
+		    			return true;
+		    		}
+		    		rc.moveBackward();
+		    		return true;
+	    		}
+	    	}
+	  	} catch (GameActionException e) {
+	  		r.getLog().printStackTrace(e);    		
+	  	}
+    }
+	  return false;
+	}
+	
 }
