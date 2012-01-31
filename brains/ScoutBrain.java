@@ -2,6 +2,7 @@ package team035.brains;
 
 import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
+import team035.messages.MessageAddress.AddressType;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
 import team035.messages.RobotInfosMessage;
@@ -31,7 +32,8 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 		LOW_FLUX,
 		OUT_OF_FLUX,
 		WAIT,
-		SCOUT
+		SCOUT,
+		RETURN_SCOUT,
 	}
 
 	protected ScoutState state;
@@ -50,6 +52,9 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	// order is TOP, RIGHT, BOTTOM, LEFT
 	// eg NORTH, EAST, SOUTH, WEST
 	protected int[] walls = {-1, -1, -1, -1};
+	
+	
+	protected RobotInfo[] enemiesSighted;
 	
 	public ScoutBrain(BaseRobot r) {
 		super(r);
@@ -269,7 +274,33 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 //			turnsSinceLastOutOfFluxMessage++;
 //			break;
 			break;
+		case RETURN_SCOUT:
+			
+			
+			
+			// look for the nearest friendly archon, and head towards them
+			MapLocation targetReturnArchon = r.getCache().getNearestFriendlyArchon();
+			
+			r.getNav().setTarget(targetReturnArchon);
+			r.getNav().doMove();
+			
+			if(targetReturnArchon.distanceSquaredTo(r.getRc().getLocation()) < 64) {
+				// we're close enough to yell out at the archon
+				RobotInfosMessage msg = new RobotInfosMessage(this.enemiesSighted, true);
+				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.ROBOT_TYPE, RobotType.ARCHON), msg);
+				this.state = ScoutState.MOVE;
+			}
+			
+			break;
 		case SCOUT:
+			
+			// Now look to see if there are any enemies around. If there are, save the enemy's
+			// position, and head for the nearest friendly archon. That's a different mode, though.
+			if(r.getCache().numEnemyAttackRobotsInRange > 0) {
+				this.enemiesSighted = r.getCache().getEnemyAttackRobotsInRange().clone();
+				// transition states.
+				this.state = ScoutState.RETURN_SCOUT;
+			}
 
 			if(r.getRc().isMovementActive()) break;
 			
@@ -285,53 +316,98 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			
 			// if we're in scout mode, travel in the direction specified unless we see a wall
 			// look at MAX RANGE in our scout direction and see if it's a wall. if it's not, 
-			// the move.
+			// then move.
 			
 			int scoutRange = (int) java.lang.Math.sqrt(r.getRc().getType().sensorRadiusSquared);
-			MapLocation locationToSense = r.getRc().getLocation().add(this.scoutDirection, scoutRange);
+			System.out.println("scoutRange " + scoutRange);
+			MapLocation locationToSense = r.getRc().getLocation().add(this.scoutDirection, scoutRange-2);
 			TerrainTile terrain = r.getRc().senseTerrainTile(locationToSense);
-			
+			System.out.println("terrain tile: " + terrain);
 			if(terrain==TerrainTile.OFF_MAP) {
-				// we've found a wall! record it and then pick a new direction to move. 
 				
-				// (ther's a small side issue here - we should try sensing closer tiles to see if
-				// they're ALSO off map. Basically, if we spawn in wall range, we'll misjudge how
-				// far off the wall is.
-				int index;
-				int loc;
+				// okay this is needlessly annoying: 
+				// we need to figure out which wall we're bouncing off. this means looking
+				// in each direction (eg if we're traveling SW, look S + W)
+				// only one of those is going to be a wall. Depending on the wall, we'll
+				// decide which axis we need to flip.
+				Direction[] testDirections = new Direction[2];
+				
 				switch(this.scoutDirection) {
-				case NORTH:
-					index = 0;
-					loc = locationToSense.y;
+				case NORTH_WEST:
+					testDirections[0] = Direction.NORTH;
+					testDirections[1] = Direction.WEST;
 					break;
-				case EAST:
-					index = 1;
-					loc = locationToSense.x;
+				case NORTH_EAST:
+					testDirections[0] = Direction.NORTH;
+					testDirections[1] = Direction.EAST;
 					break;
-				case SOUTH:
-					index = 2;
-					loc = locationToSense.y;
+
+				case SOUTH_WEST:
+					testDirections[0] = Direction.SOUTH;
+					testDirections[1] = Direction.WEST;
 					break;
-				case WEST:
-					index = 3;
-					loc = locationToSense.x;
+
+				case SOUTH_EAST:
+					testDirections[0] = Direction.SOUTH;
+					testDirections[1] = Direction.EAST;
 					break;
-				default: 
-					index = -1;
-					loc = -1;
-				}
-				if(index!=-1) {
-					this.walls[index] = loc; 
 				}
 				
-				// TODO decide to come home if we've seen enough walls
+				// now test the first direction. 
+				MapLocation wallTestLocation = r.getRc().getLocation().add(testDirections[0], scoutRange);
+				TerrainTile wallTestTerrain = r.getRc().senseTerrainTile(wallTestLocation);
 				
-				// always turn right for now.
-				if(this.clockwise) {
-					this.scoutDirection = this.scoutDirection.rotateRight().rotateRight();					
+				Direction wallDirection = Direction.NONE;
+				if(wallTestTerrain==TerrainTile.OFF_MAP) {
+					wallDirection = testDirections[0];
 				} else {
-					this.scoutDirection = this.scoutDirection.rotateLeft().rotateLeft();										
+					wallDirection = testDirections[1];
 				}
+				
+				// now set our direction!
+				Direction newScoutDirection = this.scoutDirection.opposite();
+				
+				switch(wallDirection) {
+				case NORTH:
+					switch(this.scoutDirection) {
+					case NORTH_WEST:
+						newScoutDirection = Direction.SOUTH_WEST;
+						break;
+					case NORTH_EAST:
+						newScoutDirection = Direction.SOUTH_EAST;
+						break;
+					}
+				case SOUTH:
+					switch(this.scoutDirection) {
+					case SOUTH_WEST:
+						newScoutDirection = Direction.NORTH_WEST;
+						break;
+					case SOUTH_EAST:
+						newScoutDirection = Direction.NORTH_EAST;
+						break;
+					}
+
+				case EAST:
+					switch(this.scoutDirection) {
+					case SOUTH_EAST:
+						newScoutDirection = Direction.SOUTH_WEST;
+						break;
+					case NORTH_EAST:
+						newScoutDirection = Direction.NORTH_WEST;
+						break;
+					}
+
+				case WEST:
+					switch(this.scoutDirection) {
+					case NORTH_WEST:
+						newScoutDirection = Direction.NORTH_EAST;
+						break;
+					case SOUTH_WEST:
+						newScoutDirection = Direction.SOUTH_EAST;
+						break;
+					}
+				}
+				this.scoutDirection = newScoutDirection;
 				
 				try {
 					this.r.getRc().setDirection(this.scoutDirection);
@@ -347,6 +423,10 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 					e.printStackTrace();
 				}
 			}
+			
+			
+			// TODO add a check for flux level to return us home if we would run out of flux
+			// otherwise.
 			
 			break;
 		}
