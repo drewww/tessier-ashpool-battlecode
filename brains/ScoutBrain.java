@@ -53,7 +53,6 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	// eg NORTH, EAST, SOUTH, WEST
 	protected int[] walls = {-1, -1, -1, -1};
 	
-	
 	protected RobotInfo[] enemiesSighted;
 	
 	public ScoutBrain(BaseRobot r) {
@@ -70,7 +69,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 	public void think() {
 		// do some global environmental state checks in order of precedence.
 
-		if(this.state != ScoutState.SCOUT) {
+		if(this.state != ScoutState.SCOUT && this.state != ScoutState.RETURN_SCOUT) {
 			if(r.getCache().numEnemyRobotsInAttackRange > 0) {
 				this.state = ScoutState.ATTACK;
 			} else if(this.r.getRc().getFlux() < OUT_OF_FLUX_THRESHOLD) {
@@ -276,7 +275,10 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			break;
 		case RETURN_SCOUT:
 			
-			
+			if(r.getCache().numEnemyAttackRobotsInRange > 0) {
+				this.evade();
+				break;
+			}
 			
 			// look for the nearest friendly archon, and head towards them
 			MapLocation targetReturnArchon = r.getCache().getNearestFriendlyArchon();
@@ -377,6 +379,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 						newScoutDirection = Direction.SOUTH_EAST;
 						break;
 					}
+					break;
 				case SOUTH:
 					switch(this.scoutDirection) {
 					case SOUTH_WEST:
@@ -386,7 +389,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 						newScoutDirection = Direction.NORTH_EAST;
 						break;
 					}
-
+					break;
 				case EAST:
 					switch(this.scoutDirection) {
 					case SOUTH_EAST:
@@ -396,7 +399,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 						newScoutDirection = Direction.NORTH_WEST;
 						break;
 					}
-
+					break;
 				case WEST:
 					switch(this.scoutDirection) {
 					case NORTH_WEST:
@@ -406,6 +409,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 						newScoutDirection = Direction.SOUTH_EAST;
 						break;
 					}
+					break;
 				}
 				this.scoutDirection = newScoutDirection;
 				
@@ -485,6 +489,64 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 		}
 		return false;
 	}
+	
+	protected void evade() {
+		RobotController rc = this.r.getRc();
+		RobotInfo[] enemies = r.getCache().getEnemyAttackRobotsInRange();
+		MapLocation closestLoc = null;
+		MapLocation myLoc = r.getRc().getLocation();
+		double closestDistance = Double.MAX_VALUE;
+		for(RobotInfo enemy : enemies) {
+			double distance = myLoc.distanceSquaredTo(enemy.location);
+			if(distance < closestDistance) {
+				closestLoc = enemy.location;
+				closestDistance = distance;
+			}
+		}
+		this.moveAwayFrom(closestLoc);
+		return;
+	}
+
+	protected boolean moveAwayFrom(MapLocation avoidLoc) {
+		RobotController rc = r.getRc();
+		if(!rc.isMovementActive()) {
+			MapLocation myLoc = rc.getLocation();
+	  	try {
+	
+	    	Direction avoidHeading = rc.getLocation().directionTo(avoidLoc);
+	    	if(avoidHeading != Direction.NONE && avoidHeading != Direction.OMNI) {
+	    		
+	    		Direction bestDir = Direction.NONE;
+	    		double bestDistance = myLoc.distanceSquaredTo(avoidLoc);
+	    		for(Direction tryDir : Direction.values()){
+	    			if(tryDir == Direction.OMNI ||
+	    				 tryDir == Direction.NONE ||
+	    					!rc.canMove(tryDir)) {
+	    				continue;
+	    			}
+	    			MapLocation tryLoc = myLoc.add(tryDir);
+	    			double tryDistance = tryLoc.distanceSquaredTo(avoidLoc);
+	    			if(tryDistance > bestDistance) {
+	    				bestDir = tryDir;
+	    				bestDistance = tryDistance;
+	    			}
+	    		} 
+	    		if(bestDir != Direction.NONE) {
+		    		if(rc.getDirection() != bestDir.opposite()) {
+		    			rc.setDirection(bestDir.opposite());
+		    			return true;
+		    		}
+		    		rc.moveBackward();
+		    		return true;
+	    		}
+	    	}
+	  	} catch (GameActionException e) {
+	  		r.getLog().printStackTrace(e);    		
+	  	}
+    }
+	  return false;
+	}
+
 	
 	public void shareFlux() {
 		RobotController rc = r.getRc();
