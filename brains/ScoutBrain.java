@@ -441,6 +441,13 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 
 			// TODO add a check for flux level to return us home if we would run out of flux
 			// otherwise.
+			
+			// figure out distance to nearest archon
+			int d2toNearestArchon = r.getCache().getNearestFriendlyArchon().distanceSquaredTo(r.getRc().getLocation());
+			
+			if(java.lang.Math.sqrt(d2toNearestArchon)*RobotType.SCOUT.moveCost*1.15 > r.getRc().getFlux()) {
+				this.state = ScoutState.RETURN_SCOUT;
+			}
 
 			break;
 		}
