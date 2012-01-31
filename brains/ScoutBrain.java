@@ -298,8 +298,8 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			
 			// Now look to see if there are any enemies around. If there are, save the enemy's
 			// position, and head for the nearest friendly archon. That's a different mode, though.
-			if(r.getCache().numEnemyAttackRobotsInRange > 0) {
-				this.enemiesSighted = r.getCache().getEnemyAttackRobotsInRange().clone();
+			if(r.getCache().numEnemyRobotsInRange > 0) {
+				this.enemiesSighted = r.getCache().getEnemyRobots().clone();
 				// transition states.
 				this.state = ScoutState.RETURN_SCOUT;
 			}

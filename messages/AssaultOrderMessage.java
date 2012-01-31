@@ -14,7 +14,7 @@ public class AssaultOrderMessage extends BaseMessage {
 	
 	@Override
 	public String getType() {
-		return MoveOrderMessage.type;
+		return AssaultOrderMessage.type;
 	}
 
 }
