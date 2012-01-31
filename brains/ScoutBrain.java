@@ -288,6 +288,7 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 				// we're close enough to yell out at the archon
 				RobotInfosMessage msg = new RobotInfosMessage(this.enemiesSighted, true);
 				r.getRadio().addMessageToTransmitQueue(new MessageAddress(AddressType.ROBOT_TYPE, RobotType.ARCHON), msg);
+				this.state = ScoutState.MOVE;
 			}
 			
 			break;
@@ -315,11 +316,90 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			TerrainTile terrain = r.getRc().senseTerrainTile(locationToSense);
 			System.out.println("terrain tile: " + terrain);
 			if(terrain==TerrainTile.OFF_MAP) {
-				if(this.clockwise) {
-					this.scoutDirection = this.scoutDirection.rotateRight().rotateRight();					
-				} else {
-					this.scoutDirection = this.scoutDirection.rotateLeft().rotateLeft();										
+				
+				// okay this is needlessly annoying: 
+				// we need to figure out which wall we're bouncing off. this means looking
+				// in each direction (eg if we're traveling SW, look S + W)
+				// only one of those is going to be a wall. Depending on the wall, we'll
+				// decide which axis we need to flip.
+				Direction[] testDirections = new Direction[2];
+				
+				switch(this.scoutDirection) {
+				case NORTH_WEST:
+					testDirections[0] = Direction.NORTH;
+					testDirections[1] = Direction.WEST;
+					break;
+				case NORTH_EAST:
+					testDirections[0] = Direction.NORTH;
+					testDirections[1] = Direction.EAST;
+					break;
+
+				case SOUTH_WEST:
+					testDirections[0] = Direction.SOUTH;
+					testDirections[1] = Direction.WEST;
+					break;
+
+				case SOUTH_EAST:
+					testDirections[0] = Direction.SOUTH;
+					testDirections[1] = Direction.EAST;
+					break;
 				}
+				
+				// now test the first direction. 
+				MapLocation wallTestLocation = r.getRc().getLocation().add(testDirections[0], scoutRange);
+				TerrainTile wallTestTerrain = r.getRc().senseTerrainTile(wallTestLocation);
+				
+				Direction wallDirection = Direction.NONE;
+				if(wallTestTerrain==TerrainTile.OFF_MAP) {
+					wallDirection = testDirections[0];
+				} else {
+					wallDirection = testDirections[1];
+				}
+				
+				// now set our direction!
+				Direction newScoutDirection = this.scoutDirection.opposite();
+				
+				switch(wallDirection) {
+				case NORTH:
+					switch(this.scoutDirection) {
+					case NORTH_WEST:
+						newScoutDirection = Direction.SOUTH_WEST;
+						break;
+					case NORTH_EAST:
+						newScoutDirection = Direction.SOUTH_EAST;
+						break;
+					}
+				case SOUTH:
+					switch(this.scoutDirection) {
+					case SOUTH_WEST:
+						newScoutDirection = Direction.NORTH_WEST;
+						break;
+					case SOUTH_EAST:
+						newScoutDirection = Direction.NORTH_EAST;
+						break;
+					}
+
+				case EAST:
+					switch(this.scoutDirection) {
+					case SOUTH_EAST:
+						newScoutDirection = Direction.SOUTH_WEST;
+						break;
+					case NORTH_EAST:
+						newScoutDirection = Direction.NORTH_WEST;
+						break;
+					}
+
+				case WEST:
+					switch(this.scoutDirection) {
+					case NORTH_WEST:
+						newScoutDirection = Direction.NORTH_EAST;
+						break;
+					case SOUTH_WEST:
+						newScoutDirection = Direction.SOUTH_EAST;
+						break;
+					}
+				}
+				this.scoutDirection = newScoutDirection;
 				
 				try {
 					this.r.getRc().setDirection(this.scoutDirection);
