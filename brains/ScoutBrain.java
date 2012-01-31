@@ -293,6 +293,14 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 			
 			break;
 		case SCOUT:
+			
+			// Now look to see if there are any enemies around. If there are, save the enemy's
+			// position, and head for the nearest friendly archon. That's a different mode, though.
+			if(r.getCache().numEnemyAttackRobotsInRange > 0) {
+				this.enemiesSighted = r.getCache().getEnemyAttackRobotsInRange().clone();
+				// transition states.
+				this.state = ScoutState.RETURN_SCOUT;
+			}
 
 			if(r.getRc().isMovementActive()) break;
 			
@@ -416,14 +424,6 @@ public class ScoutBrain extends RobotBrain implements RadioListener {
 				}
 			}
 			
-			
-			// Now look to see if there are any enemies around. If there are, save the enemy's
-			// position, and head for the nearest friendly archon. That's a different mode, though.
-			if(r.getCache().numEnemyAttackRobotsInRange > 0) {
-				this.enemiesSighted = r.getCache().getEnemyAttackRobotsInRange().clone();
-				// transition states.
-				this.state = ScoutState.RETURN_SCOUT;
-			}
 			
 			// TODO add a check for flux level to return us home if we would run out of flux
 			// otherwise.
