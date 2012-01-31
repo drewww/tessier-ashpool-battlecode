@@ -2,6 +2,7 @@ package team035.brains;
 
 import java.util.Random;
 
+import team035.messages.AssaultOrderMessage;
 import team035.messages.ClaimNodeMessage;
 import team035.messages.LowFluxMessage;
 import team035.messages.MessageAddress;
@@ -9,6 +10,7 @@ import team035.messages.MessageAddress.AddressType;
 import team035.messages.MessageWrapper;
 import team035.messages.MoveOrderMessage;
 import team035.messages.RobotInfosMessage;
+import team035.messages.SRobotInfo;
 import team035.messages.ScoutOrderMessage;
 import team035.modules.NavController;
 import team035.modules.RadioListener;
@@ -44,7 +46,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	
 	protected enum ArchonState {
 		LOITERING, MOVING, BUILDING, SPREADING, REFUELING, EVADING, 
-		BUILDUP, DISPATCH_SCOUT, DISPATCH_ATTACKER
+		BUILDUP, DISPATCH_SCOUT, DISPATCH_ATTACKER, MOVE_OUT
 	}
 
 	
@@ -68,6 +70,8 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		
 		r.getRadio().addListener(this, ClaimNodeMessage.type);
 		r.getRadio().addListener(this, LowFluxMessage.type);
+		r.getRadio().addListener(this, RobotInfosMessage.type);
+		r.getRadio().addListener(this, AssaultOrderMessage.type);
 		
 		r.getRadar().setEnemyTargetBroadcast(true);
 		this.initCooldownsAndCounters();
@@ -116,12 +120,24 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		case DISPATCH_ATTACKER:
 			dispatchAttacker();
 			break;
+		case MOVE_OUT:
+			moveOut();
+			break;
 		}
 	}
 	
 	protected void displayState() {
 		String stateString = this.getState().toString();
 		this.r.getRc().setIndicatorString(0, stateString);
+	}
+	
+	
+	protected void moveOut() {
+		MapLocation target = this.r.getNav().getTarget();
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new AssaultOrderMessage(target));
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST), new MoveOrderMessage(target));
+		this.popState();
+		this.pushState(ArchonState.MOVING);
 	}
 	
 	protected void buildup() {
@@ -543,9 +559,23 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		}
 		
 		if(msg.msg.getType()==RobotInfosMessage.type) {
-			// foo
+			RobotInfosMessage scoutingMessage = (RobotInfosMessage) msg.msg;
+			if(scoutingMessage.isScoutingReport) {
+				if(this.getState() != ArchonState.MOVE_OUT) {
+					this.r.getNav().setTarget(scoutingMessage.robots[0].toRobotInfo().location);
+					this.pushState(ArchonState.MOVE_OUT);
+				}
+			}
 		}
-		
+	
+		if(msg.msg.getType()==AssaultOrderMessage.type) {
+			AssaultOrderMessage assaultMessage = (AssaultOrderMessage) msg.msg;
+			if(this.getState() != ArchonState.MOVE_OUT &&
+					this.getState() != ArchonState.MOVING) {
+				this.r.getNav().setTarget(assaultMessage.moveTo);
+				this.pushState(ArchonState.MOVE_OUT);
+			}
+		}
 	}
 	
 	// Helper stuffs
