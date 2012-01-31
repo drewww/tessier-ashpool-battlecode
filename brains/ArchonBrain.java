@@ -64,6 +64,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 	protected int turnsSinceLastEnemySeen;
 	protected int turnsSinceLastScorcherSeen;
 	protected int turnsSinceLastScoutMade;
+	private MapLocation closestLastEnemyLoc;
 	
 	public ArchonBrain(BaseRobot r) {
 		super(r);
@@ -80,6 +81,7 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		this.setArchonNumber();
 		this.refuelOnStack = false;
 		rng = new Random(this.r.getRc().getRobot().getID()+1);
+		this.closestLastEnemyLoc = null;
 	}
 
 	
@@ -200,8 +202,12 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		}
 		
 		spottedWall = spottedWall.rotateRight().rotateRight().rotateRight();
-		
-		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new ScoutOrderMessage(spottedWall, this.archonNumber==0));
+		this.dispatchScout(spottedWall);
+	}
+	
+	
+	protected void dispatchScout(Direction scoutDir) {
+		this.r.getRadio().addMessageToTransmitQueue(new MessageAddress(MessageAddress.AddressType.BROADCAST_DISTANCE, 2, r.getRc().getLocation()), new ScoutOrderMessage(scoutDir, this.archonNumber==0));
 		this.popState();
 	}
 	
@@ -239,11 +245,22 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 		if(r.getCache().numEnemyRobotsInRange > 0) {
 			this.turnsSinceLastEnemySeen = 0;
 		}
+		MapLocation closestEnemyLoc = null;
+		MapLocation myLoc = this.r.getRc().getLocation();
+		double closestDistance = Double.MAX_VALUE;
 		for(RobotInfo robot : r.getCache().getEnemyRobots()) {
 			if(robot.type == RobotType.SCORCHER) {
 				this.turnsSinceLastScorcherSeen = 0;
 				break;
 			}
+			double distance = myLoc.distanceSquaredTo(robot.location);
+			if(distance < closestDistance) {
+				closestEnemyLoc = robot.location;
+				closestDistance = distance;
+			}
+		}
+		if(closestEnemyLoc != null) {
+			this.closestLastEnemyLoc = closestEnemyLoc;
 		}
 		
 		if(r.getCache().numEnemyAttackRobotsInRange > 0) {
@@ -495,6 +512,10 @@ public class ArchonBrain extends RobotBrain implements RadioListener {
 					r.getRc().spawn(type);
 					if(type == RobotType.SCOUT){
 						this.turnsSinceLastScoutMade = 0;
+						if(this.closestLastEnemyLoc != null) { 
+							Direction scoutingDirection = this.r.getRc().getLocation().directionTo(this.closestLastEnemyLoc);
+							this.dispatchScout(scoutingDirection);
+						}
 					}
 				} catch (GameActionException e) {
 					// TODO Auto-generated catch block
